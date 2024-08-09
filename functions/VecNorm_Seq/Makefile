@@ -19,7 +19,7 @@ verify_real: VecNorm_Seq_driver.cvl $(VEC)/petscvec.c VecNorm_Seq.c $(INC)/petsc
 	civl verify $(TYPE) -DVecNorm_Seq=VecNorm_Seq_spec -sysIncludePath=$(INC)  VecNorm_Seq_driver.cvl $(VEC)/petscvec.c VecNorm_Seq.c
 
 verify_complex: VecNorm_Seq_driver.cvl $(VEC)/petscvec.c VecNorm_Seq.c $(INC)/petscvec.h
-	civl verify $(TYPE) -DVecNorm_Seq=VecNorm_Seq_spec -DUSE_COMPLEX -showPathCondition=BLOCK -sysIncludePath=$(INC)  VecNorm_Seq_driver.cvl $(VEC)/petscvec.c VecNorm_Seq.c
+	civl verify $(TYPE) -DVecNorm_Seq=VecNorm_Seq_spec -DUSE_COMPLEX -sysIncludePath=$(INC)  VecNorm_Seq_driver.cvl $(VEC)/petscvec.c VecNorm_Seq.c
 
 clean:
 	rm -rf *.o *~ *.tmp *.exec CIVLREP *.dSYM
