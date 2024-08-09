@@ -1,0 +1,62 @@
+# CIVL-PETSc Verification Project
+
+This repository is being used to explore the application of CIVL to PETSc (Portable, Extensible Toolkit for Scientific Computation). The structure may change frequently as the project evolves.
+
+## Current Structure
+
+civl-petsc/
+├── common.mk
+├── README.md
+├── examples/
+│   ├── ex1.c
+│   ├── ex11.c
+│   └── Makefile
+├── functions/
+│   ├── VecConjugate_Seq/
+│   │   ├── VecConjugate_Seq.c
+│   │   ├── Makefile
+│   │   ├── VecConjugate_Seq_driver.cvl
+│   │   └── VecConjugate_Seq_test.c
+│   ├── VecCopy_Seq/
+│   │   ├── Makefile
+│   │   ├── VecCopy_Seq.c
+│   │   ├── VecCopy_Seq_driver.cvl
+│   │   └── VecCopy_Seq_test.c
+│   └── VecNorm_Seq/
+│       ├── Makefile
+│       ├── VecNorm_Seq.c
+│       ├── VecNorm_Seq_driver.cvl
+│       ├── VecNorm_Seq_test.c
+│       └── VecNorm_Seq_test.exec
+├── scaffolding/
+│   ├── include/
+│   │   └── petscvec.h
+│   └── src/
+│       └── vec/
+│           ├── Makefile
+│           └── petscvec.c
+
+## Directory Descriptions
+
+- `scaffolding/`: Contains definitions of program elements (functions, type definitions, etc.) needed for verification. These are simplified definitions, not necessarily the same as in the actual PETSc code.
+  - `include/`: Header files for scaffolding.
+  - `src/`: Source files for scaffolding implementations.
+
+- `examples/`: Contains examples (from PETSc or otherwise) that we can verify. These examples may use the scaffolding.
+
+- `functions/`: Contains excerpts of actual PETSc code, with one function per subdirectory. Our goal is to verify these without modification.
+  - Each function has its own subdirectory (e.g., `VecNorm_Seq/`) containing:
+    - The function implementation (e.g., `VecNorm_Seq.c`)
+    - A CIVL driver for verification (e.g., `VecNorm_Seq_driver.cvl`)
+    - A test file (e.g., `VecNorm_Seq_test.c`)
+    - A Makefile for building and running tests
+
+- `original/`: Contains the actual unmodified PETSc code relevant to this project.
+
+## Verification Process
+
+The verification may use the scaffolding for definitions of functions used by the function being verified. Each function in the `functions/` directory is isolated for individual verification using CIVL.
+
+## Note
+
+This structure is subject to change as the project develops. Please refer to this README for the most up-to-date information on the repository structure and verification process.

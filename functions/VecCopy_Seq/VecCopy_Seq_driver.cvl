@@ -1,0 +1,33 @@
+#include <petscvec.h>
+#include <assert.h>
+#undef VecCopy_Seq
+PetscErrorCode VecCopy_Seq(Vec xin, Vec yin);
+$input int N_MIN = 1, N_MAX = 5, N;
+$assume(N_MIN <= N && N <= N_MAX);
+#ifdef USE_COMPLEX
+$input PetscScalar A[N], zeros = MY_COMPLEX(0.0, 0.0);
+#else
+$input PetscScalar A[N], zeros = 0.0;
+#endif
+
+int main(int argc, char **argv) {
+    Vec x = vec_create_seq(N, A), y = vec_create_seq(N, NULL);
+    PetscScalar *x_array, *y_array;
+    printf("For N: %s\n", N);
+    printf("Before VecCopy_Seq:\n");
+    vecprint_seq("X: ", x);
+    vecprint_seq("Y: ", y);
+    printf("\n");
+    PetscErrorCode err_expected = VecCopy_Seq_spec(x, y);
+    PetscErrorCode err_actual = VecCopy_Seq(x, y);
+    printf("After VecCopy_Seq:\n");
+    vecprint_seq("X: ", x);
+    vecprint_seq("Y: ", y);
+    printf("\n");
+    for (int i = 0; i < N; i++) {
+        assert(x->data[i] == y->data[i]);
+    }
+    $assert(err_expected == err_actual);
+    vec_destroy_seq(x);
+    vec_destroy_seq(y);
+}

@@ -1,0 +1,51 @@
+#include <petscvec.h>
+#include <math.h>
+#include <stdio.h>
+#undef VecNorm_Seq
+PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z);
+$input int N_MIN = 1, N_MAX = 2, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input PetscScalar A[N];
+int main(int argc, char **argv) {
+    PetscInitialize(&argc, &argv, (char*)0, (char*)0);
+    Vec x = vec_create_seq(N, A);
+    PetscReal expected[2] = {0.0, 0.0}, actual[2];
+    int normType = $choose_int(5);
+    printf("N = %d",N);
+    printf("\n");
+    switch(normType) {
+        case NORM_1:
+            printf("NORM_1:\n");
+            break;
+        case NORM_2:
+            printf("NORM_2:\n");
+            break;
+        case NORM_FROBENIUS:
+            printf("NORM_FROBENIUS:\n");
+            break;
+        case NORM_INFINITY:
+            printf("NORM_INFINITY:\n");
+            break;
+        case NORM_1_AND_2:
+            printf("NORM_1_AND_2:\n");
+            break;
+        default:
+            printf("Unknown:\n");
+    }
+    PetscErrorCode err_expected = VecNorm_Seq_spec(x, normType, expected);
+    if (normType == NORM_1_AND_2)
+        printf("expected = %lf, %lf\n", expected[0], expected[1]);
+    else
+        printf("expected = %lf\n", expected[0]);
+    PetscErrorCode err_actual = VecNorm_Seq(x, normType, actual);
+    if (normType == NORM_1_AND_2) {
+        printf("actual   = %lf, %lf\n\n", actual[0], actual[1]);
+        $assert(expected[0] == actual[0]);
+        $assert(expected[1] == actual[1]);
+    } else {
+        printf("actual   = %lf\n\n", actual[0]);
+        $assert(expected[0] == actual[0]);
+    }
+    $assert(err_expected == err_actual);
+    vec_destroy_seq(x);
+}

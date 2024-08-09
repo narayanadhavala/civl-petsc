@@ -1,0 +1,21 @@
+#include <petscvec.h>
+#undef VecConjugate_Seq
+PetscErrorCode VecConjugate_Seq(Vec x);
+$input int N_MIN = 1, N_MAX = 5, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input PetscScalar A[N];
+int main(void) {
+    Vec x = vec_create_seq(N, A), y = vec_create_seq(N, A);
+    printf("N = %d", N);
+    printf("\n");
+    vecprint_seq("x: ", x);  
+    PetscErrorCode err_actual = VecConjugate_Seq(x);
+    vecprint_seq("x̄: ", x);
+    printf("\n");
+    PetscErrorCode err_expected = VecConjugate_Seq_spec(y);
+    $assert(err_expected == 0);
+    $assert(err_actual == 0);
+    $assert(vec_eq_seq(x,y));
+    vec_destroy_seq(x);
+    vec_destroy_seq(y);
+}
