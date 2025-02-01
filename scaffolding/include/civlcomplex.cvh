@@ -1,0 +1,48 @@
+#ifndef _CIVLCOMPLEX_CVH
+#define _CIVLCOMPLEX_CVH
+/* CIVL complex number library.  A complex number is represented as a
+   struct with two real fields.  The type of the fields is specified
+   using the preprocessor object macro CIVL_RTYPE.  This should be
+   defined before loading this header.  If it is not defined, the
+   default real type, double, will be used. */
+
+#ifndef CIVL_RTYPE
+#define CIVL_RTYPE double
+#endif
+
+typedef struct $complex {
+  CIVL_RTYPE real;
+  CIVL_RTYPE imag;
+} $complex;
+
+/* The complex number x+y*i */
+#define $make_complex(x,y) ($complex){x,y}
+
+/* The complex number 0+0i */
+#define $czero  (($complex){ 0.0, 0.0 })
+
+$complex $cadd($complex x, $complex y);
+
+$complex $csub($complex x, $complex y);
+
+$complex $cmul($complex x, $complex y);
+
+$complex $cdiv($complex x, $complex y);
+
+$complex $conj($complex x);
+
+CIVL_RTYPE $cabs($complex x);
+
+/* The real component of x */
+#define $creal(x) (x).real
+
+/* The imaginary component of x */
+#define $cimag(x) (x).imag
+
+/* Are the two complex numbers equal? */
+#define $ceq(x,y) ((x).real==(y).real && (x).imag==(y).imag)
+
+/* Prints the complex number */
+void $cprint($complex x);
+
+#endif

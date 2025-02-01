@@ -1,0 +1,218 @@
+#include "civlvec.cvh"
+#include <math.h>
+$input int N = 2;
+$input STYPE V1[N], V2[N];
+
+void test_vec_make_from_dense() {
+  $vec v = $vec_make_from_dense(N, V1);
+  $print("Testing $vec_make_from_dense\n");
+  $vec_print(v);
+  $print("\n");
+  $assert($vec_len(v) == N);
+  for (int i = 0; i < N; i++)
+    $assert(scalar_eq($vec_ith(v, i), V1[i]));
+}
+
+void test_vec_zero() {
+  int s = 5;
+  $vec v = $vec_zero(s);
+  $print("Testing $vec_zero\n");
+  $vec_print(v);
+  $print("\n");
+  for (int i = 0; i < s; i++)
+    $assert(scalar_eq($vec_ith(v, i), scalar_zero));
+}
+
+void test_vec_len() {
+  $vec v = $vec_make_from_dense(N, V1);
+  $print("Testing $vec_len\n");
+  int len = $vec_len(v);
+  $print("Length: ", len, "\n");
+  $assert(len == N);
+  $print("\n");
+}
+
+void test_vec_ith() {
+  $vec v = $vec_make_from_dense(N, V1);
+  $print("Testing $vec_ith\n");
+  for (int i = 0; i < N; i++) {
+    STYPE value = $vec_ith(v, i);
+    $print("v[", i, "] = ", value, "\t");
+    $assert(scalar_eq(value, V1[i]));
+    $print("\n");
+  }
+}
+
+void test_vec_print() {
+  $vec v = $vec_make_from_dense(N, V1);
+  $print("\nTesting $vec_print\n");
+  $vec_print(v);
+  $print("\n");
+}
+
+void test_vec_eq() {
+  $vec v1 = $vec_make_from_dense(N, V1);
+  $vec v2 = $vec_make_from_dense(N, V1);
+  $vec v3 = $vec_make_from_dense(N, V2);
+  _Bool result = $vec_eq(v1, v2);
+  $print("Testing $vec_eq: ", result, "\n");
+  $assert(result);
+}
+
+void test_vec_set() {
+  $vec v = $vec_make_from_dense(N, V1);
+  STYPE new_val = scalar_of(5.0);
+  $print("Testing $vec_set\n");
+  $vec v2 = $vec_set(v, 1, new_val);
+  $vec_print(v2);
+  $print("\n");
+  $assert(scalar_eq($vec_ith(v2, 1), new_val));
+  $assert(scalar_eq($vec_ith(v2, 0), V1[0]));
+}
+
+void test_vec_concat() {
+  $vec v1 = $vec_make_from_dense(N, V1);
+  $vec v2 = $vec_make_from_dense(N, V2);
+  $print("Testing $vec_concat\n");
+  $vec v3 = $vec_concat(v1, v2);
+  $vec_print(v3);
+  $print("\n");
+  for (int i = 0; i < N; i++) {
+    $assert(scalar_eq($vec_ith(v3, i), V1[i]));
+    $assert(scalar_eq($vec_ith(v3, N + i), V2[i]));
+  }
+}
+
+void test_vec_subseq() {
+  $vec v = $vec_make_from_dense(N, V1);
+  $print("Testing $vec_subseq\n");
+  $vec sub_v = $vec_subseq(v, 0, N);
+  $vec_print(sub_v);
+  $print("\n");
+  // subsequence should match the original vector
+  for (int i = 0; i < N; i++)
+    $assert(scalar_eq($vec_ith(sub_v, i), V1[i]));
+}
+
+void test_vec_dot() {
+  $vec v1 = $vec_make_from_dense(N, V1);
+  $vec v2 = $vec_make_from_dense(N, V2);
+  STYPE dot_result = $vec_dot(v1, v2);
+  $print("Dot product result: ", dot_result, "\n");
+  STYPE expected = scalar_zero;
+  for (int i = 0; i < N; i++)
+    expected = scalar_add(expected,
+			  scalar_mul(V1[i], scalar_conj(V2[i])));
+  $print("Dot product expected: ");
+  scalar_print(expected);
+  $print("\n");
+  $assert(scalar_eq(dot_result, expected));
+  $print("\n");
+}
+
+int test_vec_add() {
+  $vec v1 = $vec_make_from_dense(N, V1), v2 = $vec_make_from_dense(N, V2);
+  $vec v3 = $vec_add(v1, v2);
+  $print("Testing $vec_add\n");
+  $vec_print(v3);
+  $print("\n");
+  for (int i = 0; i < N; i++)
+    $assert(scalar_eq(v3.data[i], scalar_add(v1.data[i], v2.data[i])));
+}
+
+void test_vec_scalar_mul() {
+  $vec v = $vec_make_from_dense(N, V1);
+  STYPE scalar = scalar_of(2.0);
+  $print("Testing $vec_scalar_mul\n");
+  $vec result = $vec_scalar_mul(scalar, v);
+  $vec_print(result);
+  $print("\n");
+  for (int i = 0; i < N; i++)
+    $assert(scalar_eq($vec_ith(result, i), scalar_mul(scalar, V1[i])));
+}
+
+void test_norm1() {
+  $vec v = $vec_make_from_dense(N, V1);
+  $vec_print(v);
+  CIVL_RTYPE actual = $vec_norm(v, 1);
+  $print("Norm 1 actual: ", actual, "\n");
+  CIVL_RTYPE expected = 0.0;
+  for (int i = 0; i < N; i++)
+    expected += scalar_abs(v.data[i]);
+  $print("Norm 1 expect: ", expected, "\n");
+  $assert(actual == expected);
+  $print("\n");
+}
+
+void test_norm2() {
+  $vec v = $vec_make_from_dense(N, V1);
+  CIVL_RTYPE actual = $vec_norm(v, 2);
+  $print("Norm 2 result: ", actual, "\n");
+  CIVL_RTYPE expected = 0.0;
+  for (int i = 0; i < N; i++)
+    expected += scalar_abs(v.data[i]) * scalar_abs(v.data[i]);
+  expected = sqrt(expected);
+  $print("Norm 2 expect: ", expected, "\n");
+  $assert(actual == expected);
+  $print("\n");
+}
+
+void test_norm3() {
+  $vec v = $vec_make_from_dense(N, V1);
+  CIVL_RTYPE actual = $vec_norm(v, 3);
+  $print("Norm 3 result: ", actual, "\n");
+  CIVL_RTYPE expected = 0.0;
+  for (int i = 0; i < N; i++)
+    expected += pow(scalar_abs(v.data[i]), 3);
+  expected = pow(expected, 1.0 / 3.0);
+  $print("Norm 3 expect: ", expected, "\n");
+  $assert(actual == expected);
+  $print("\n");
+}
+
+void test_norm0() {
+  $vec v = $vec_make_from_dense(N, V1);
+  CIVL_RTYPE actual = $vec_norm(v, 0);
+  $print("Norm 0 result: ", actual, "\n");
+  // VENKATA: Where's the assertion?
+}
+
+void test_norm_inf() {
+  $vec v = $vec_make_from_dense(N, V1);
+  CIVL_RTYPE actual = $vec_norm(v, $norm_infty);
+  $print("Norm inf actual = ", actual, "\n");
+  CIVL_RTYPE expected = 0.0;
+  for (int i = 0; i < N; i++) {
+    CIVL_RTYPE x = scalar_abs(v.data[i]);
+    if (x > expected) expected = x;
+  }
+  $print("Norm inf expect = ", expected, "\n");
+  $assert(actual == expected);
+}
+
+int test_dot() {
+  $print("N = ", N, "\n");
+  $vec v1 = $vec_make_from_dense(N, V1);
+  $vec v2 = $vec_make_from_dense(N, V2);
+  STYPE dot_result = $vec_dot(v1, v2);
+  $print("Vec Dot: ", dot_result, "\n");
+}
+
+int main(void) {
+  test_vec_make_from_dense();
+  test_vec_zero();
+  test_vec_len();
+  test_vec_ith();
+  test_vec_print();
+  test_vec_eq();
+  test_vec_set();
+  test_vec_concat();
+  test_vec_subseq();
+  test_vec_dot();
+  test_vec_add();
+  test_vec_scalar_mul();
+  test_norm1();
+  test_norm2();
+  // VENKATA: no test norm3????
+  test_norm_inf();
+}

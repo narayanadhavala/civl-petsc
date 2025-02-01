@@ -1,0 +1,61 @@
+#ifndef _CIVLVEC_CVH
+#define _CIVLVEC_CVH
+/* CIVL vector library.  Note that the scalar type and operations
+   are defined in header scalars.cvh. */
+#include "scalars.cvh"
+
+// Used to represent infinity in norms
+#define $norm_infty (-1)
+
+/* The vector type. */
+typedef struct $vec {
+  int len;      // length of the vector
+  STYPE data[]; // the elements of the vector
+} $vec;
+
+/* Returns the vector represented by the contiguous sequence of len
+   scalars starting at vals. */
+$vec $vec_make_from_dense(int len, STYPE *vals);
+
+/* Returns the vector of length len in which every component is 0. */
+$vec $vec_zero(int len);
+
+/* Returns the length of the vector. */
+int $vec_len($vec vec);
+
+/* Returns the i-th entry of the vector */
+STYPE $vec_ith($vec vec, int i);
+
+/* Prints the vector */
+void $vec_print($vec vec);
+
+/* Determins whether the two vectors are equal, i.e., have same length
+   and same sequence of scalars. */
+_Bool $vec_eq($vec vec1, $vec vec2);
+
+/* Returns the vector which is the same as the given vector except in
+   the i-th component, where the value is changed to x. */
+$vec $vec_set($vec vec, int i, STYPE x);
+
+/* Returns the concatenation of vec1, vec2. */
+$vec $vec_concat($vec vec1, $vec vec2);
+
+/* Returns the vector obtained by extracting the subsequence of
+   elements of vec starting at position first, with length n. */
+$vec $vec_subseq($vec vec, int first, int n);
+
+/* Returns the L_p-norm of vec.  The infinity norm is obtained
+   using $norm_infty.  If STYPE is complex, ... */
+CIVL_RTYPE $vec_norm($vec vec, int p);
+
+/* Returns the dot product of vec1 and vec2.  In complex mode, the
+   result is a complex number, the sum over i of v1[i]*conj(v2[i]). */
+STYPE $vec_dot($vec vec1, $vec vec2);
+
+/* Adds two vectors component-wise */
+$vec $vec_add($vec vec1, $vec vec2);
+
+/* Scalar times a vector */
+$vec $vec_scalar_mul(STYPE a, $vec vec);
+
+#endif

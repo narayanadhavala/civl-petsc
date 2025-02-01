@@ -1,0 +1,95 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+
+$input int n = 5;
+$input double scal = 5;
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  // Vectors x and y
+  $vec x = $vec_zero(n);
+  $vec y = $vec_zero(n);
+  $vec z = $vec_zero(n);
+  $vec w = $vec_zero(n);
+
+  STYPE x_values[n], y_values[n], z_values[n], alpha, beta, gamma, expected[n];
+
+#ifdef USE_COMPLEX
+  alpha = $make_complex(scal, 0.0);
+  beta = $make_complex(scal, 0.0);
+  gamma = $make_complex(scal, 0.0);
+#else
+  alpha = scal;
+  beta = scal;
+  gamma = scal;
+#endif
+
+  if (rank == 0) {
+    for (int i = 0; i < n; i++) {
+#ifdef USE_COMPLEX
+      x_values[i] = $make_complex((double)(i + 1), 0.0);
+      y_values[i] = $make_complex((double)(i + 1), 0.0);
+      z_values[i] = $make_complex((double)(i + 1), 0.0);
+      expected[i] = $make_complex(0.0, 0.0);
+#else
+      x_values[i] = (double)(i + 1);
+      y_values[i] = (double)(i + 1);
+      z_values[i] = (double)(i + 1);
+      expected[i] = 0.0;
+#endif
+    }
+
+    for (int i = 0; i < n; i++) {
+#ifdef USE_COMPLEX
+      expected[i] =
+          $cadd($cadd($cmul(alpha, x_values[i]), $cmul(beta, y_values[i])),
+                $cmul(gamma, z_values[i]));
+#else
+      expected[i] = ((alpha * x_values[i]) +
+                     (beta * y_values[i] + (gamma * z_values[i])));
+#endif
+    }
+
+    x = $vec_make_from_dense(n, x_values);
+    y = $vec_make_from_dense(n, y_values);
+    z = $vec_make_from_dense(n, z_values);
+    w = $vec_make_from_dense(n, expected);
+
+    $print("CIVL:");
+    $print("Vector x:\n");
+    $vec_print(x);
+    $print("Vector y:\n");
+    $vec_print(y);
+    $print("Vector z:\n");
+    $vec_print(z);
+  }
+
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec expectedAXPBYPCZ = civlToPetscVec(w, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecAXPBYPCZ(p_z, alpha, beta, gamma, p_x, p_y);
+  $assert(err_actual == 0);
+  bool flg;
+  VecEqual(p_z, expectedAXPBYPCZ, &flg);
+  $print("Flag = ", flg);
+  $assert(flg == $true, "VecAXPBYPCZ mismatch.");
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+  }
+  vecprint_mpi("Actual   AXPBYPCZ", p_z);
+  vecprint_mpi("Expected AXPBYPCZ", expectedAXPBYPCZ);
+
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  VecDestroy(&p_z);
+  VecDestroy(&expectedAXPBYPCZ);
+
+  MPI_Finalize();
+  return 0;
+}

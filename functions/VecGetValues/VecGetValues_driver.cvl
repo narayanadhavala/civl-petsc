@@ -1,0 +1,66 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <pointer.cvh>
+#include <stdio.h>
+#undef VecGetValues
+
+PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[],
+                            PetscScalar y[]);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+$input int ni, B;
+$assume(0 <= B && B <= N);
+$assume(0 <= ni && ni <= B);
+
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Real[N], X_Imag[N];
+#else
+$input CIVL_RTYPE X_Real[N];
+#endif
+
+int main() {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, chosen_proc, nprocs;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &nprocs);
+
+  $vec x = $vec_zero(N);
+
+  if (rank == 0) {
+    STYPE x_values[N];
+
+    for (int i = 0; i < N; i++)
+      x_values[i] = $cmake(X_Real[i], X_Imag[i]);
+
+    x = $vec_make_from_dense(N, x_values);
+
+    $print("Initial Vector x:\n");
+    $vec_print(x);
+    chosen_proc = $choose_int(nprocs);
+  }
+
+  MPI_Bcast(&chosen_proc, 1, MPI_INT, 0, comm);
+  // Convert x to PETSc Vec for testing
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+
+  if (rank == chosen_proc) {
+    int ix[ni];
+    STYPE retrieved_values[ni], expected_values[ni];
+    int elements_owned = ((p_x->map->rend) - (p_x->map->rstart));
+    for (int j = 0; j < ni; j++)
+      ix[j] = p_x->map->rstart + $choose_int(elements_owned);
+    // Retrieve values using VecGetValues
+    PetscErrorCode err_actual = VecGetValues(p_x, ni, ix, retrieved_values);
+    $assert(err_actual == 0);
+    VecGetValues(p_x, ni, ix, expected_values);
+    $print("\nExpected Values = ", expected_values,
+           "\nActual Values = ", retrieved_values, "\n\n");
+    $equals(&retrieved_values, &expected_values);
+  }
+
+  VecDestroy(&p_x);
+  MPI_Finalize();
+}

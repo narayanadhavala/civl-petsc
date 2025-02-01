@@ -1,0 +1,85 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+#undef VecTDot
+PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Real[N], X_Imag[N], Y_Real[N], Y_Imag[N];
+#else
+$input CIVL_RTYPE X_Real[N], Y_Real[N];
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  // Vectors x and y
+  $vec x = $vec_zero(0);
+  $vec y = $vec_zero(0);
+
+  STYPE x_values[N], y_values[N], actual, expected;
+  if (rank == 0) {
+    for (int i = 0; i < N; i++) {
+#ifdef USE_COMPLEX
+      x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
+      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
+      expected = $make_complex(0.0, 0.0);
+#else
+      x_values[i] = X_Real[i];
+      y_values[i] = Y_Real[i];
+      expected = 0.0;
+#endif
+    }
+    for (int i = 0; i < N; i++) {
+#ifdef USE_COMPLEX
+      expected = $cadd(expected, $cmul(y_values[i], x_values[i]));
+#else
+      expected += y_values[i] * x_values[i];
+#endif
+    }
+
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+    $print("CIVL:\n");
+    $print("Vector x:\n");
+    $vec_print(x);
+    $print("\nVector y:\n");
+    $vec_print(y);
+  }
+
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecTDot(p_x, p_y, &actual);
+
+  if (rank == 0) {
+    if (err_actual == 0) {
+#ifdef USE_COMPLEX
+      $print("\nVecTDot Product = (", PetscRealPart(actual), ", ",
+             PetscImaginaryPart(actual), ")\n\n");
+      $assert(PetscRealPart(actual) == PetscRealPart(expected),
+              "Real part mismatch");
+      $assert(PetscImaginaryPart(actual) == PetscImaginaryPart(expected),
+              "Imaginary part mismatch");
+#else
+      $print("\nVecTDot Product = ", actual, "\n\n");
+#endif
+    } else {
+      $print("Error in VecTDot: PetscErrorCode = ", actual, "\n");
+#ifdef USE_COMPLEX
+      $assert($ceq(actual, expected), "VecTDot product mismatch");
+#else
+      $assert(actual == expected, "VecTDot product mismatch");
+#endif
+    }
+  }
+
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  MPI_Finalize();
+  return 0;
+}

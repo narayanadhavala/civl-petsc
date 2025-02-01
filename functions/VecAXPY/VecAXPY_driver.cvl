@@ -1,0 +1,48 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+#undef VecAXPY
+PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE X_Real[N], Y_Real[N], alpha_Real;
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N], alpha_Imag;
+#define $smake(x, y) $make_complex(x, y)
+#else
+#define $smake(x, y) (x)
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  $vec x = $vec_zero(0), y = $vec_zero(0), z = $vec_zero(0);
+  STYPE x_values[N], y_values[N], alpha = $smake(alpha_Real, alpha_Imag);
+  if (rank == 0) {
+    for (int i = 0; i < N; i++) {
+      x_values[i] = $smake(X_Real[i], X_Imag[i]);
+      y_values[i] = $smake(Y_Real[i], Y_Imag[i]);
+    }
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+    z = $vec_make_from_dense(N, y_values);
+    $print("Vector x: "); $vec_print(x);
+    $print("Vector y: "); $vec_print(y);
+  }
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec expectedAXPY = civlToPetscVec(z, PETSC_DECIDE, MPI_COMM_WORLD);
+  PetscErrorCode err_actual = VecAXPY(p_y, alpha, p_x),
+                 err_expected = VecAXPY_spec(expectedAXPY, alpha, p_x);
+  $assert(err_actual == err_expected);
+  vecprint_mpi("\nActual   AXPY", p_y);
+  vecprint_mpi("\nExpected AXPY", expectedAXPY);
+  bool flg;
+  VecEqual(p_y, expectedAXPY, &flg);
+  $assert(flg, "VecAXPY mismatch between actual and expected results.");
+  VecDestroy(&p_x); VecDestroy(&p_y); VecDestroy(&expectedAXPY);
+  MPI_Finalize();
+  return 0;
+}

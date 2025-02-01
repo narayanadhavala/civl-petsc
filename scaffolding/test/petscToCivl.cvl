@@ -1,0 +1,43 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "petscvec.h"
+#include <mpi.h>
+
+$input int N_MIN = 1, N_MAX = 3, N;
+$assume(N_MIN <= N && N <= N_MAX);
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE A_Real, A_Imag;
+#else
+$input CIVL_RTYPE A_Real;
+#endif
+
+int main(void) {
+  STYPE value[N];
+  $elaborate(N);
+  for (int i = 0; i < N; i++) {
+#ifdef USE_COMPLEX
+    value[i] = $make_complex(A_Real, A_Imag);
+#else
+    value[i] = A_Real;
+#endif
+  }
+  int rank, size;
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  if (rank == 0)
+    $print("No.of procs: ", size, "\n");
+  $vec x = $vec_make_from_dense(N, value);
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  vecprint_mpi("petsc vectr", p_x);
+  $vec c_x = petscToCivlVec(p_x);
+  if (rank == 0) {
+    $print("CIVL Vector:");
+    $vec_print(c_x);
+    $assert($vec_eq(x, c_x));
+    $print("\n");
+  }
+  VecDestroy(&p_x);
+  MPI_Finalize();
+}

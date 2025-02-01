@@ -1,27 +1,24 @@
-#include <petscvec.h>
-#include <assert.h>
+#include "petscvec.h"
+#include <mpi.h>
 
 int main(void) {
-    Vec x;
-    PetscReal norm;
-    PetscInt    n = 4;
+  PetscReal norm;
+  NormType type = NORM_2;
+  PetscInt n = 4;
+  STYPE values[n];
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  for (int i = 0; i < n; i++) {
 #ifdef USE_COMPLEX
-    PetscScalar one = MY_COMPLEX(1.0, 1.0);
+    values[i] = $make_complex(1.0, 0.0);
 #else
-    PetscScalar one = 1.0;
+    values[i] = 1.0;
 #endif
-    PetscCall(PetscInitialize(NULL, NULL, NULL, NULL));
-    /* Create a vector */
-    PetscCall(VecCreate(PETSC_COMM_WORLD, &x));
-    PetscCall(VecSetSizes(x, PETSC_DECIDE, n));
-    PetscCall(VecSetFromOptions(x));
-    PetscCall(VecSet(x, one));
-    PetscErrorCode expected = PetscCall(VecNorm_Seq_spec(x, NORM_2, &norm)); 
-    /* Compute the norm using VecNorm_Seq */
-    PetscErrorCode actual = PetscCall(VecNorm_Seq(x, NORM_2, &norm)); 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Norm of the vector: %g\n", (double)norm));
-    assert(expected == actual);
-    /* Destroy the Vector */
-    PetscCall(VecDestroy(&x));
-    PetscCall(PetscFinalize());
+  }
+  $vec c_x = $vec_make_from_dense(n, values);
+  Vec p_x = civlToPetscVec(c_x, PETSC_DECIDE, comm);
+  PetscErrorCode actual = VecNorm_Seq(p_x, type, &norm);
+  $print("Norm ", type, " = ", norm, "\n");
+  VecDestroy(&p_x);
+  MPI_Finalize();
 }

@@ -1,0 +1,56 @@
+#ifndef _MATRIX_CVH
+#define _MATRIX_CVH
+#include "civlvec.cvh"
+
+/* The matrix type. */
+typedef struct $mat {
+   int n, m; // num rows, columns;
+   STYPE data[][]; // STYPE[n][m]
+} $mat;
+
+/* Makes a $mat from a matrix represented as an array of pointer.
+   Each pointer points to a row of scalars. */
+$mat $mat_make_rowptr(int n, int m, STYPE** rows);
+
+/* Returns the $mat represented as a contiguous block of n*m scalars
+   in row major order. */
+$mat $mat_make_rowmaj(int n, int m, STYPE* data);
+
+/* Returns the $mat represented as a contiguous block of m*n
+   scalars in column major order. */
+$mat $mat_make_colmaj(int n, int m, STYPE* data);
+
+/* Returns the $mat represented in Compressed Sparse Row format.  n is
+   the number of rows, m the number of columns, rowstarts is an array
+   of length n+1, and cols and data are arrays of length NZ, where
+   NZ=rowstarts[n]. */
+$mat $mat_make_from_csr(int n, int m, int* rowstarts,
+   int* cols, STYPE* data);
+
+/* Returns the matrix with n rows, m columns, in which every entry is
+   0. */
+$mat $mat_zero(int n, int m);
+
+/* Returns the i-th row of the matrix, as a vector. */
+$vec $mat_row($mat mat, int i);
+
+/* Returns the j-th column of the matrix, as a vector. */
+$vec $mat_col($mat mat, int j);
+
+/* Returns the (i,j)-th entry of the matrix. */
+STYPE $mat_entry($mat mat, int i, int j);
+
+/* Returns the matrix identical to the given one, except that the
+   (i,j)-th entry is replaced with x. */
+$mat $mat_set($mat mat, int i, int j, STYPE x);
+
+/* Returns the product of mat and vec, thinking of vec as a column.
+   Precondition: the number of columns of mat equals the length of
+   vec.  The vector returned will have length equal to the number of
+   rows of mat. */
+$vec $mat_vec_mul($mat mat, $vec vec);
+
+/* Returns the matrix product of mat1 and mat2. */
+$mat $mat_mul($mat mat1, $mat mat2);
+
+#endif

@@ -1,0 +1,61 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <pointer.cvh>
+#include <stdio.h>
+#undef VecGetValues
+
+/* Prototype for VecGetValues */
+PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[],
+                            PetscScalar y[]);
+
+/* CIVL Input Declarations */
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+int main() {
+  /* Initialize MPI */
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, nprocs, chosen_proc, ni = 3, ix[ni] = {1, 3, 4};
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &nprocs);
+
+  /* Initialize a CIVL vector x with all elements set to zero */
+  $vec x = $vec_zero(N);
+  STYPE x_values[N];
+
+  /* Process 0 initializes x_values */
+  if (rank == 0) {
+    for (int i = 0; i < N; i++) {
+#ifdef USE_COMPLEX
+      x_values[i] = $make_complex(i + 1, 0.0);
+#else
+      x_values[i] = i + 1;
+#endif
+    }
+    x = $vec_make_from_dense(N, x_values);
+    $print("Initial Vector x:\n");
+    $vec_print(x);
+    chosen_proc = $choose_int(nprocs);
+  }
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  MPI_Bcast(&chosen_proc, 1, MPI_INT, 0, comm);
+  /* Only the chosen process performs VecGetValues and verification */
+  if (rank == chosen_proc) {
+    STYPE retrieved_values[ni], expected_values[ni];
+    int elements_owned = ((p_x->map->rend) - (p_x->map->rstart));
+    for (int j = 0; j < ni; j++)
+      ix[j] = p_x->map->rstart + $choose_int(elements_owned);
+    /* Retrieve values from the vector at specified indices */
+    PetscErrorCode err_actual = VecGetValues(p_x, ni, ix, retrieved_values);
+    $assert(err_actual == 0, "VecGetValues failed.");
+    for (int i = 0; i < ni; i++)
+      expected_values[i] = x_values[ix[i]];
+    /* Verify each retrieved value against the expected value */
+    $equals(&retrieved_values, &expected_values);
+    $print("\nExpected Values = ", expected_values,
+           "\nActual Values = ", retrieved_values, "\n\n");
+  }
+  VecDestroy(&p_x);
+  MPI_Finalize();
+}

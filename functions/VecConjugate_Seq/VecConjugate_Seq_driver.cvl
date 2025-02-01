@@ -1,21 +1,30 @@
 #include <petscvec.h>
 #undef VecConjugate_Seq
 PetscErrorCode VecConjugate_Seq(Vec x);
-$input int N_MIN = 1, N_MAX = 5, N;
-$assume(N_MIN <= N && N <= N_MAX);
-$input PetscScalar A[N];
+
 int main(void) {
-    Vec x = vec_create_seq(N, A), y = vec_create_seq(N, A);
-    printf("N = %d", N);
-    printf("\n");
-    vecprint_seq("x: ", x);  
-    PetscErrorCode err_actual = VecConjugate_Seq(x);
-    vecprint_seq("x̄: ", x);
-    printf("\n");
-    PetscErrorCode err_expected = VecConjugate_Seq_spec(y);
-    $assert(err_expected == 0);
-    $assert(err_actual == 0);
-    $assert(vec_eq_seq(x,y));
-    vec_destroy_seq(x);
-    vec_destroy_seq(y);
+    STYPE value[N], conj_values[N];
+    create_vector_values(N, value);
+    MPI_Init(NULL, NULL);
+    MPI_Comm comm = MPI_COMM_WORLD;
+    $vec x = $vec_make_from_dense(N, value);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+    if (rank == 0)
+        printf("For N: %d\n", N);
+    vecprint_mpi("Input Vector", p_x);
+    VecConjugate_Seq(p_x);
+    $vec p_conj = petscToCivlVec(p_x);
+    $print("PETSC x̄:");
+    $vec_print(p_conj);
+    for (int i = 0; i < N; i++)
+        conj_values[i] = scalar_conj(value[i]);
+    $vec c_conj = $vec_make_from_dense(N, conj_values);
+    $print("CIVL x̄:");
+    $vec_print(c_conj);
+    $assert($vec_eq(c_conj, p_conj));
+    VecDestroy(&p_x);
+    MPI_Finalize();
+    return 0;
 }

@@ -1,0 +1,83 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+#undef VecWAXPY
+PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Real[N], X_Imag[N], Y_Real[N], Y_Imag[N], alpha_Real,
+    alpha_Imag;
+#else
+$input CIVL_RTYPE X_Real[N], Y_Real[N], alpha_Real;
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  // Vectors x and y
+  $vec x = $vec_zero(N);
+  $vec y = $vec_zero(N);
+  $vec z = $vec_zero(N);
+
+  STYPE x_values[N], y_values[N], alpha;
+
+#ifdef USE_COMPLEX
+  alpha = $make_complex(alpha_Real, alpha_Imag);
+#else
+  alpha = alpha_Real;
+#endif
+
+  if (rank == 0) {
+    for (int i = 0; i < N; i++) {
+#ifdef USE_COMPLEX
+      x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
+      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
+#else
+      x_values[i] = X_Real[i];
+      y_values[i] = Y_Real[i];
+#endif
+    }
+
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+
+    $print("CIVL:");
+    $print("Vector x:\n");
+    $vec_print(x);
+    $print("Vector y:\n");
+    $vec_print(y);
+  }
+
+  // PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y);
+
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec expectedWAXPY = civlToPetscVec(z, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecWAXPY(p_z, alpha, p_x, p_y);
+  PetscErrorCode err_expected = VecWAXPY_spec(expectedWAXPY, alpha, p_x, p_y);
+  vecprint_mpi("\nActual   WAXPY", p_z);
+  vecprint_mpi("\nExpected WAXPY", expectedWAXPY);
+  $assert(err_actual == err_expected);
+  bool flg;
+  VecEqual(p_z, expectedWAXPY, &flg);
+  $assert(flg == $true,
+          "VecWAXPY mismatch between actual and expected results.");
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+  }
+
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  VecDestroy(&p_z);
+  VecDestroy(&expectedWAXPY);
+
+  MPI_Finalize();
+  return 0;
+}

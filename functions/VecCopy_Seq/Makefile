@@ -4,7 +4,9 @@ INC = $(ROOT)/scaffolding/include
 SRC = $(ROOT)/scaffolding/src
 VEC = $(SRC)/vec
 
-all: VecCopy_Seq.o VecCopy_Seq_test.exec
+all: verify
+
+#all: VecCopy_Seq.o VecCopy_Seq_test.exec
 
 test: VecCopy_Seq_test.exec
 	./VecCopy_Seq_test.exec
@@ -17,7 +19,8 @@ VecCopy_Seq.o: VecCopy_Seq.c $(INC)/petscvec.h
 	$(CC) -DVecCopy_Seq=VecCopy_Seq_spec -I$(INC) -c VecCopy_Seq.c
 
 verify: VecCopy_Seq_driver.cvl $(VEC)/petscvec.c VecCopy_Seq.c $(INC)/petscvec.h
-	civl verify -sysIncludePath=$(INC) -DVecCopy_Seq=VecCopy_Seq_spec VecCopy_Seq_driver.cvl $(VEC)/petscvec.c VecCopy_Seq.c
+	civl verify -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 -sysIncludePath=$(INC) -DVecCopy_Seq=VecCopy_Seq_spec \
+		VecCopy_Seq_driver.cvl $(VEC)/petscvec.c VecCopy_Seq.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
 
 clean:
 	rm -rf *.o *~ *.tmp *.exec CIVLREP *.dSYM
