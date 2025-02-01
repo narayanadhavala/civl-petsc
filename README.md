@@ -5,7 +5,6 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 ## Current Structure
 ```
 .
-├── build_functions.sh
 ├── common.mk
 ├── examples
 │   ├── ex11.c
@@ -143,7 +142,7 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 │       ├── VecWAXPY_driver.cvl
 │       └── VecWAXPY_test.cvl
 ├── Makefile
-├── README
+├── README.md
 └── scaffolding
     ├── include
     │   ├── civlcomplex.cvh
