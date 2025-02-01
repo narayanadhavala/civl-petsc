@@ -3,7 +3,7 @@
 This repository is being used to explore the application of CIVL to PETSc (Portable, Extensible Toolkit for Scientific Computation). The structure may change frequently as the project evolves.
 
 ## Current Structure
-
+```
 .
 ├── build_functions.sh
 ├── common.mk
@@ -170,7 +170,7 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 │       ├── Makefile
 │       └── petscToCivl.cvl
 └── test_results.log
-
+```
 
 ## Directory Descriptions
 
