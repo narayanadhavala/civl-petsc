@@ -191,12 +191,6 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 
 ## Verification Process
 
-Below is a sample description you can add to your README file:
-
----
-
-## Verification Process
-
 The verification process leverages the scaffolding (located in the `scaffolding/` directory) to provide the necessary definitions for the functions used by the function being verified. Each function in the `functions/` directory is isolated for individual verification using CIVL.
 
 A bash script (`build_functions.sh`) has been provided to automate the verification process for all functions. This script dynamically locates every subdirectory under `functions/` (excluding hidden directories and directories such as `CIVLREP`), and in each one it runs the `make all` target. The target is expected to run the CIVL verification for that function.
