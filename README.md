@@ -32,11 +32,6 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 │   │   ├── VecAYPX.c
 │   │   ├── VecAYPX_driver.cvl
 │   │   └── VecAYPX_test.cvl
-│   ├── VecConcatenate
-│   │   ├── Makefile
-│   │   ├── VecConcatenate.c
-│   │   ├── VecConcatenate_driver.cvl
-│   │   └── VecConcatenate_test.cvl
 │   ├── VecConjugate_Seq
 │   │   ├── Makefile
 │   │   ├── VecConjugate_Seq.c
@@ -149,27 +144,26 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 │       └── VecWAXPY_test.cvl
 ├── Makefile
 ├── README
-├── scaffolding
-│   ├── include
-│   │   ├── civlcomplex.cvh
-│   │   ├── civlvec.cvh
-│   │   ├── matrix.cvh
-│   │   ├── petscvec.h
-│   │   └── scalars.cvh
-│   ├── src
-│   │   └── vec
-│   │       ├── civlcomplex.cvl
-│   │       ├── civlvec.cvl
-│   │       ├── Makefile
-│   │       └── petscvec.c
-│   ├── svn-commit.tmp~
-│   └── test
-│       ├── civlcomplex_test.cvl
-│       ├── civlvec_test.cvl
-│       ├── equals.c
-│       ├── Makefile
-│       └── petscToCivl.cvl
-└── test_results.log
+└── scaffolding
+    ├── include
+    │   ├── civlcomplex.cvh
+    │   ├── civlvec.cvh
+    │   ├── matrix.cvh
+    │   ├── petscvec.h
+    │   └── scalars.cvh
+    ├── src
+    │   └── vec
+    │       ├── civlcomplex.cvl
+    │       ├── civlvec.cvl
+    │       ├── Makefile
+    │       └── petscvec.c
+    └── test
+        ├── civlcomplex_test.cvl
+        ├── civlvec_test.cvl
+        ├── equals.c
+        ├── Makefile
+        └── petscToCivl.cvl
+
 ```
 
 ## Directory Descriptions
@@ -191,35 +185,39 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 
 ## Verification Process
 
-The verification process leverages the scaffolding (located in the `scaffolding/` directory) to provide the necessary definitions for the functions used by the function being verified. Each function in the `functions/` directory is isolated for individual verification using CIVL.
+The verification process relies on the scaffolding found in the `scaffolding/` directory to supply all the necessary definitions for the functions under test. Each function within the `functions/` directory is isolated for individual verification using CIVL.
 
-A bash script (`build_functions.sh`) has been provided to automate the verification process for all functions. This script dynamically locates every subdirectory under `functions/` (excluding hidden directories and directories such as `CIVLREP`), and in each one it runs the `make all` target. The target is expected to run the CIVL verification for that function.
+A super Makefile is employed to automate the CIVL verification of these individual function implementations. Every function resides in its own subdirectory and has a dedicated Makefile (with an `all` target) that triggers its CIVL verification. The super Makefile dynamically detects these subdirectories, executes their verification routines, and produces an overall report.
 
-### How to Run the Script
+### How It Works
 
-1. **Make the Script Executable**  
-   In the root directory of the repository, run:
-   ```bash
-   chmod +x build_functions.sh
-   ```
+1. **Automatic Discovery of Function Subdirectories**  
+   The Makefile uses the `find` command to list all immediate subdirectories in the `functions/` folder, excluding any hidden directories (those beginning with a dot) and directories named `CIVLREP`. This ensures that any new function folder added to `functions/` is automatically incorporated into the verification process without requiring manual intervention.
 
-2. **Execute the Script**  
-   Run the script by executing:
-   ```bash
-   ./build_functions.sh
-   ```
+2. **Verification Target (`verify`)**  
+   The default target (`all`) triggers the verification process by:
+   - Printing header messages to signal the start of verification.
+   - Removing any pre-existing `test_results.log` file.
+   - Iterating through each discovered subdirectory:
+     - Changing into the subdirectory.
+     - Running `make all` to initiate the CIVL verification for that function.
+     - Checking the exit status:
+       - If the verification is successful, it prints a "TEST SUCCESS" message and logs the result as `SUCCESS` in `test_results.log`.
+       - If the verification fails, it prints a "TEST FAIL" message and logs it as `FAIL` in the same file.
+   - Once all subdirectories have been processed, it prints a summary and saves the detailed log to `test_results.log`.
+
+3. **Cleanup Process**  
+   The `clean` target iterates through each function subdirectory, executing their respective `clean` targets, and also removes the generated log file.
 
 ### Report Generation
 
-- **Logging:**  
-  As the script processes each function subdirectory, it logs the outcome (either `SUCCESS` or `FAIL`) for each function into a log file named `test_results.log`.
+- **Console Output:**  
+  As the Makefile runs, it outputs messages for each function indicating whether the test succeeded or failed.
+  
+- **Log File:**  
+  The `test_results.log` file records the outcome for each function directory with an entry of either `SUCCESS` or `FAIL`, serving as a detailed report of the verification process.
 
-- **Summary:**  
-  At the end of the verification, the script displays a summary on the terminal listing:
-  - **Working:** All function directories that passed verification.
-  - **Not Working:** All function directories that failed verification.
-
-This automated approach allows you to quickly assess the status of all functions and identify any that may require further attention.
+Using this super Makefile, developers can quickly verify that all function implementations in the `functions/` directory pass their individual CIVL checks, with any failures immediately identifiable from both the on-screen summary and the log file.
 
 ## Note
 
