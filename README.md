@@ -1,40 +1,41 @@
+
 # CIVL-PETSc Verification Project
 
 This repository is being used to explore the application of CIVL to PETSc (Portable, Extensible Toolkit for Scientific Computation). The structure may change frequently as the project evolves.
 
 ## Current Structure
 
-civl-petsc/
-├── common.mk
-├── README.md
-├── examples/
-│   ├── ex1.c
-│   ├── ex11.c
-│   └── Makefile
-├── functions/
-│   ├── VecConjugate_Seq/
-│   │   ├── VecConjugate_Seq.c
-│   │   ├── Makefile
-│   │   ├── VecConjugate_Seq_driver.cvl
-│   │   └── VecConjugate_Seq_test.c
-│   ├── VecCopy_Seq/
-│   │   ├── Makefile
-│   │   ├── VecCopy_Seq.c
-│   │   ├── VecCopy_Seq_driver.cvl
-│   │   └── VecCopy_Seq_test.c
-│   └── VecNorm_Seq/
-│       ├── Makefile
-│       ├── VecNorm_Seq.c
-│       ├── VecNorm_Seq_driver.cvl
-│       ├── VecNorm_Seq_test.c
-│       └── VecNorm_Seq_test.exec
-├── scaffolding/
-│   ├── include/
-│   │   └── petscvec.h
-│   └── src/
-│       └── vec/
-│           ├── Makefile
-│           └── petscvec.c
+    civl-petsc/
+    ├── common.mk
+    ├── README.md
+    ├── examples/
+    │   ├── ex1.c
+    │   ├── ex11.c
+    │   └── Makefile
+    ├── functions/
+    │   ├── VecConjugate_Seq/
+    │   │   ├── VecConjugate_Seq.c
+    │   │   ├── Makefile
+    │   │   ├── VecConjugate_Seq_driver.cvl
+    │   │   └── VecConjugate_Seq_test.c
+    │   ├── VecCopy_Seq/
+    │   │   ├── Makefile
+    │   │   ├── VecCopy_Seq.c
+    │   │   ├── VecCopy_Seq_driver.cvl
+    │   │   └── VecCopy_Seq_test.c
+    │   └── VecNorm_Seq/
+    │       ├── Makefile
+    │       ├── VecNorm_Seq.c
+    │       ├── VecNorm_Seq_driver.cvl
+    │       ├── VecNorm_Seq_test.c
+    │       └── VecNorm_Seq_test.exec
+    ├── scaffolding/
+    │   ├── include/
+    │   │   └── petscvec.h
+    │   └── src/
+    │       └── vec/
+    │           ├── Makefile
+    │           └── petscvec.c
 
 ## Directory Descriptions
 
@@ -60,3 +61,4 @@ The verification may use the scaffolding for definitions of functions used by th
 ## Note
 
 This structure is subject to change as the project develops. Please refer to this README for the most up-to-date information on the repository structure and verification process.
+
