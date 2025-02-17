@@ -15,59 +15,31 @@ int main(void) {
   $vec y = $vec_zero(n);
   $vec z = $vec_zero(n);
 
-  STYPE x_values[n], y_values[n], beta, expected[n];
-
-#ifdef USE_COMPLEX
-  beta = $make_complex(scale, 0.0);
-#else
-  beta = scale;
-#endif
+  STYPE x_values[n], y_values[n], beta = scalar_make(scale, 0.0), expected[n];
 
   if (rank == 0) {
     for (int i = 0; i < n; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex((double)(i + 1), 0.0);
-      y_values[i] = $make_complex((double)(i + 1), 0.0);
-      expected[i] = $make_complex(0.0, 0.0);
-#else
-      x_values[i] = (double)(i + 1);
-      y_values[i] = (double)(i + 1);
-      expected[i] = 0.0;
-#endif
+      x_values[i] = scalar_make((double)(i + 1), 0.0);
+      y_values[i] = scalar_make((double)(i + 1), 0.0);
+      expected[i] = scalar_make(0.0, 0.0);
     }
 
-    // Calculate expected results based on the value of beta
-    for (int i = 0; i < n; i++) {
-#ifdef USE_COMPLEX
-      if ($creal(beta) == 0.0 && $cimag(beta) == 0.0) {
+        // Calculate expected results based on the value of beta
+    for (int i = 0; i < N; i++) {
+      if (scalar_eq(scalar_of(0.0), beta)) {
         // beta == 0: y remains unchanged
         expected[i] = y_values[i];
-      } else if ($creal(beta) == 1.0 && $cimag(beta) == 0.0) {
+      } else if (scalar_eq(scalar_of(1.0), beta)) {
         // beta == 1: y = y + x
-        expected[i] = $cadd(y_values[i], x_values[i]);
-      } else if ($creal(beta) == -1.0 && $cimag(beta) == 0.0) {
+        expected[i] = scalar_add(y_values[i], x_values[i]);
+      } else if (scalar_eq(scalar_of(-1.0), beta)) {
         // beta == -1: y = y - x
-        expected[i] = $csub(y_values[i], x_values[i]);
+        expected[i] = scalar_sub(y_values[i], x_values[i]);
       } else {
         // y = beta * y + x
-        STYPE scaled_y = $cmul(beta, y_values[i]);
-        expected[i] = $cadd(scaled_y, x_values[i]);
+        STYPE scaled_y = scalar_mul(beta, y_values[i]);
+        expected[i] = scalar_add(scaled_y, x_values[i]);
       }
-#else
-      if (beta == 0.0) {
-        // beta == 0: y remains unchanged
-        expected[i] = y_values[i];
-      } else if (beta == 1.0) {
-        // beta == 1: y = y + x
-        expected[i] += x_values[i];
-      } else if (beta == -1.0) {
-        // beta == -1: y = y - x
-        expected[i] -= x_values[i];
-      } else {
-        // y = beta * y + x
-        expected[i] = beta * y_values[i] + x_values[i];
-      }
-#endif
     }
 
     x = $vec_make_from_dense(n, x_values);

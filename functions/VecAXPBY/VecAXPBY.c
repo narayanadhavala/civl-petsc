@@ -15,7 +15,8 @@ PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
   VecCheckAssembled(y);
   PetscValidLogicalCollectiveScalar(y, alpha, 2);
   PetscValidLogicalCollectiveScalar(y, beta, 3);
-  if ($is_scalar_zero(alpha) && $is_scalar_one(beta))
+  //used the scalar_eq to compare the complex & real numbers
+  if (scalar_eq(scalar_of(0), alpha) && scalar_eq(scalar_of(1), beta))
     PetscFunctionReturn(PETSC_SUCCESS);
   if (x == y) {
     // used the scalar_add to add two complex numbers

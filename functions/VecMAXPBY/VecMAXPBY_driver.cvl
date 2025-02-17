@@ -10,11 +10,9 @@ $input int N_MIN, N_MAX, N, NV;
 $assume(N_MIN <= N && N <= N_MAX);
 $assume(1 <= NV && NV <= N);
 
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE X_Real[NV][N], X_Imag[NV][N], Y_Real[N], Y_Imag[N],
-    alpha_Real[NV], alpha_Imag[NV], beta_Real, beta_Imag;
-#else
 $input CIVL_RTYPE X_Real[NV][N], Y_Real[N], alpha_Real[NV], beta_Real;
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[NV][N], Y_Imag[N], alpha_Imag[NV], beta_Imag;
 #endif
 
 int main(void) {
@@ -23,86 +21,60 @@ int main(void) {
   int rank;
   MPI_Comm_rank(comm, &rank);
 
-  $vec x[NV];
-  $vec y = $vec_zero(N);
-  $vec expected_y = $vec_zero(N);
+  $vec x[NV], y = $vec_zero(N);
 
   STYPE x_values[NV][N], y_values[N], alpha[NV], beta;
 
   // Initialize alpha and beta scalars
-  for (int v = 0; v < NV; v++) {
-#ifdef USE_COMPLEX
-    alpha[v] = $make_complex(alpha_Real[v], alpha_Imag[v]);
-#else
-    alpha[v] = alpha_Real[v];
-#endif
-  }
-#ifdef USE_COMPLEX
-  beta = $make_complex(beta_Real, beta_Imag);
-#else
-  beta = beta_Real;
-#endif
+  for (int v = 0; v < NV; v++)
+    alpha[v] = scalar_make(alpha_Real[v], alpha_Imag[v]);
+  beta = scalar_make(beta_Real, beta_Imag);
 
   if (rank == 0) {
     // Initialize y and x values
-    for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
-#else
-      y_values[i] = Y_Real[i];
-#endif
-    }
+    for (int i = 0; i < N; i++)
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
 
     for (int v = 0; v < NV; v++) {
-      for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-        x_values[v][i] = $make_complex(X_Real[v][i], X_Imag[v][i]);
-#else
-        x_values[v][i] = X_Real[v][i];
-#endif
-      }
+      for (int i = 0; i < N; i++)
+        x_values[v][i] = scalar_make(X_Real[v][i], X_Imag[v][i]);
     }
 
     y = $vec_make_from_dense(N, y_values);
-    expected_y = $vec_make_from_dense(N, y_values);
 
     for (int v = 0; v < NV; v++) {
       x[v] = $vec_make_from_dense(N, x_values[v]);
     }
 
-    $print("Initial Vector y:\n");
+    $print("\nN = ", N, "\ny: ");
     $vec_print(y);
     for (int v = 0; v < NV; v++) {
-      $print("Vector x[", v, "]:\n");
+      $print("\nx[", v, "]: ");
       $vec_print(x[v]);
     }
   }
 
   Vec p_x[NV];
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec expected_p_y = civlToPetscVec(expected_y, PETSC_DECIDE, comm);
+  Vec expected_p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
 
   for (int v = 0; v < NV; v++) {
     p_x[v] = civlToPetscVec(x[v], PETSC_DECIDE, comm);
   }
 
-  MPI_Barrier(comm);
-
-  // Apply VecMAXPBY
   PetscErrorCode err_actual = VecMAXPBY(p_y, NV, alpha, beta, p_x);
-  PetscErrorCode err_expected = VecMAXPBY_spec(expected_p_y, NV, alpha, beta, p_x);
+  VecMAXPBY_spec(expected_p_y, NV, alpha, beta, p_x);
 
-  MPI_Barrier(comm);
-
-  // Validate the results
-  $assert(err_actual == err_expected);
+  $assert(err_actual == 0);
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+  }
+  vecprint_mpi("Actual  ", p_y);
+  vecprint_mpi("Expected", expected_p_y);
   bool flg;
   VecEqual(p_y, expected_p_y, &flg);
-  MPI_Barrier(comm);
   $assert(flg, "VecMAXPBY mismatch between actual and expected results.");
-
-  vecprint_mpi("Actual   VecMAXPBY", p_y);
-  vecprint_mpi("Expected VecMAXPBY", expected_p_y);
   
   // Clean up
   VecDestroy(&p_y);

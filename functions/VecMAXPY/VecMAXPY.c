@@ -30,7 +30,7 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
       VecCheckAssembled(x[i]);
       PetscCall(VecLockReadPush(x[i]));
       // changed to $scalar_eq for scalar comparision
-      zeros += $scalar_eq(alpha[i], scalar_zero);
+      zeros += scalar_eq(alpha[i], scalar_zero);
     }
 
     if (zeros < nv) {

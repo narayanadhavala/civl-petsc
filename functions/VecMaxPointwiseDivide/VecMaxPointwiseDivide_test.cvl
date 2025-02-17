@@ -2,39 +2,42 @@
 #include <mpi.h>
 #include <stdio.h>
 
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
 int main(void) {
   CIVL_RTYPE max;
-  int n = 4, rank;
-  STYPE x_values[n], y_values[n];
-  $vec c_x, c_y;
+  int rank;
+  STYPE x_values[N], y_values[N];
+  $vec x = $vec_zero(N), y = $vec_zero(N);
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &rank);
   if (rank == 0){
-    for (int i = 0; i < n; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex((double)(i + 1), 0.0); // x = {1, 2, 3, 4}
-      y_values[i] = $make_complex((double)(i + 2), 0.0); // y = {2, 3, 4, 5}
-#else
-      x_values[i] = (double)(i + 1); // x = {1, 2, 3, 4}
-      y_values[i] = (double)(i + 2); // y = {2, 3, 4, 5}
-#endif
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_of((i + 1));
+      y_values[i] = scalar_of((i + 2));
     }
-    c_x = $vec_make_from_dense(n, x_values);
-    c_y = $vec_make_from_dense(n, y_values);
-    $print("c_x = ", c_x,"\n\nc_y = ", c_y,"\n\n");
+
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+    
+    $print("\nN = ", N, "\nx: ");
+    $vec_print(x);
+    $print("\ny: ");
+    $vec_print(y);
   }
-  Vec p_x = civlToPetscVec(c_x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(c_y, PETSC_DECIDE, comm);
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
   PetscErrorCode actual = VecMaxPointwiseDivide(p_x, p_y, &max);
   if (rank == 0){
     if (actual == 0)
-      $print("Max Pointwise Divide = ", max, "\n");
+      $print("\nMax Pointwise Divide = ", max, "\n");
     else
       $print("Error in VecMaxPointwiseDivide: PetscErrorCode = ", actual, "\n");
   }
+
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   MPI_Finalize();
-  return 0;
 }

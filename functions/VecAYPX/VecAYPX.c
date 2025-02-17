@@ -20,7 +20,8 @@ PetscErrorCode VecAYPXAsync_Private(Vec y, PetscScalar beta, Vec x,
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(VecLockReadPush(x));
-  if ($is_scalar_zero(beta)) {
+  // used the scalar_eq to compare the complex & real numbers
+  if (scalar_eq(scalar_of(0), beta)) {
     PetscCall(VecCopy(x, y));
   } else {
     PetscCall(PetscLogEventBegin(VEC_AYPX, x, y, 0, 0));

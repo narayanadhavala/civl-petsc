@@ -1,22 +1,54 @@
-#include <math.h>
 #include <mpi.h>
 #include <petscvec.h>
-#include <stdio.h>
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE A_Real[N], A_Imag[N];
+#else
+$input CIVL_RTYPE A_Real[N];
+#endif
+
+void printNormType(NormType type) {
+  switch (type) {
+  case NORM_1:
+    printf("NORM_1: ");
+    break;
+  case NORM_2:
+    printf("NORM_2: ");
+    break;
+  case NORM_FROBENIUS:
+    printf("NORM_FROBENIUS: ");
+    break;
+  case NORM_INFINITY:
+    printf("NORM_INFINITY: ");
+    break;
+  case NORM_1_AND_2:
+    printf("NORM_1_AND_2: ");
+    break;
+  default:
+    printf("Unknown: ");
+  }
+}
 
 int main(void) {
   STYPE value[N];
-  create_vector_values(N, value); // Initialize the vector with test values
-
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
   int rank;
   MPI_Comm_rank(comm, &rank);
-
-  // Create CIVL vector and convert to PETSc vector
-  $vec x = $vec_make_from_dense(N, value);
+  $vec x = $vec_zero(N);
   if (rank == 0) {
-    $print("CVIL:");
-    $vec_print(x);
+    STYPE value[N];
+    for (int i = 0; i < N; i++)
+      value[i] = scalar_make(A_Real[i], A_Imag[i]);
+
+    x = $vec_make_from_dense(N, value);
+    if (rank == 0) {
+      $print("\nN = ", N, "\nx: ");
+      $vec_print(x);
+    }
   }
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   PetscBool before_avail, after_avail;
@@ -25,44 +57,23 @@ int main(void) {
 
   printf("N = %d\n", N);
   if (rank == 0) {
-    switch (normType) {
-    case NORM_1:
-      printf("NORM_1:\n");
-      break;
-    case NORM_2:
-      printf("NORM_2:\n");
-      break;
-    case NORM_FROBENIUS:
-      printf("NORM_FROBENIUS:\n");
-      break;
-    case NORM_INFINITY:
-      printf("NORM_INFINITY:\n");
-      break;
-    case NORM_1_AND_2:
-      printf("NORM_1_AND_2:\n");
-      break;
-    default:
-      printf("Unknown norm type:\n");
-    }
+    printNormType(normType);
+    printf("\n");
   }
   // Check if norm is available before computation
   PetscErrorCode err_before =
       VecNormAvailable(p_x, normType, &before_avail, actual);
-  $assert(before_avail == PETSC_FALSE,
-          "Norm should not be available initially.");
-  // Compute the norm explicitly
+  $assert(!before_avail, "Norm should not be available initially.");
   VecNorm(p_x, normType, actual);
-  // Check if norm is available after computation
   PetscErrorCode err_after =
-      VecNormAvailable(p_x, normType, &after_avail, actual);
-  if (normType != NORM_1_AND_2) {
-    $assert(after_avail == PETSC_TRUE,
-            "Norm should be available after computation.");
-  }
+      VecNormAvailable_spec(p_x, normType, &after_avail, actual);
   if (normType == NORM_1_AND_2)
     printf("actual   = %lf, %lf\n\n", actual[0], actual[1]);
   else
     printf("actual   = %lf\n\n", actual[0]);
+  $assert(after_avail, "Norm should be available after computation.");
+  $assert(err_before == 0 && err_after == 0);
+
   // Clean up
   VecDestroy(&p_x);
   MPI_Finalize();

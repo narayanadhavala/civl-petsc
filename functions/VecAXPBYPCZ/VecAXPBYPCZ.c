@@ -25,8 +25,11 @@ PetscErrorCode VecAXPBYPCZAsync_Private(Vec z, PetscScalar alpha,
   PetscValidLogicalCollectiveScalar(z, alpha, 2);
   PetscValidLogicalCollectiveScalar(z, beta, 3);
   PetscValidLogicalCollectiveScalar(z, gamma, 4);
-  if ($is_scalar_zero(alpha) && $is_scalar_zero(beta) && $is_scalar_one(gamma))
+  // used the scalar_eq to compare the complex & real numbers
+  if (scalar_eq(scalar_of(0), alpha) && scalar_eq(scalar_of(0), beta) &&
+      scalar_eq(scalar_of(0), gamma)) {
     PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   // PetscCall(VecSetErrorIfLocked(z, 1));
   PetscCall(VecLockReadPush(x));

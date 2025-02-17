@@ -1,18 +1,38 @@
-#include <math.h>
-#include <mpi.h>
 #include <petscvec.h>
-#include <stdio.h>
+#include <pointer.cvh>
 #undef VecNorm_Seq
 PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z);
 
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
 
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE X_Real[N], X_Imag[N];
-#else
 $input CIVL_RTYPE X_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N];
+#else
 #endif
+
+void printNormType(NormType type) {
+  switch (type) {
+  case NORM_1:
+    printf("NORM_1: ");
+    break;
+  case NORM_2:
+    printf("NORM_2: ");
+    break;
+  case NORM_FROBENIUS:
+    printf("NORM_FROBENIUS: ");
+    break;
+  case NORM_INFINITY:
+    printf("NORM_INFINITY: ");
+    break;
+  case NORM_1_AND_2:
+    printf("NORM_1_AND_2: ");
+    break;
+  default:
+    printf("Unknown: ");
+  }
+}
 
 int main(void) {
   MPI_Init(NULL, NULL);
@@ -24,7 +44,7 @@ int main(void) {
 
   if (rank == 0) {
     for (int i = 0; i < N; i++)
-      x_values[i] = $cmake(X_Real[i], X_Imag[i]);
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
     x = $vec_make_from_dense(N, x_values);
     $print("CIVL Vector:");
     $vec_print(x);
@@ -33,44 +53,23 @@ int main(void) {
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   CIVL_RTYPE expected[2] = {0.0, 0.0}, actual[2];
   int normType = $choose_int(5);
-  printf("N = %d", N);
-  printf("\n");
+
   if (rank == 0) {
-    switch (normType) {
-    case NORM_1:
-      printf("NORM_1:\n");
-      break;
-    case NORM_2:
-      printf("NORM_2:\n");
-      break;
-    case NORM_FROBENIUS:
-      printf("NORM_FROBENIUS:\n");
-      break;
-    case NORM_INFINITY:
-      printf("NORM_INFINITY:\n");
-      break;
-    case NORM_1_AND_2:
-      printf("NORM_1_AND_2:\n");
-      break;
-    default:
-      printf("Unknown:\n");
-    }
+    $print("\nN = ", N, "\n");
+    printNormType(normType);
   }
-  PetscErrorCode err_expected = VecNorm_Seq_spec(p_x, normType, expected);
-  if (normType == NORM_1_AND_2)
-    printf("expected = %lf, %lf\n", expected[0], expected[1]);
-  else
-    printf("expected = %lf\n", expected[0]);
+
   PetscErrorCode err_actual = VecNorm_Seq(p_x, normType, actual);
+  $assert(err_actual ==0);
+  VecNorm_Seq_spec(p_x, normType, expected);
+
   if (normType == NORM_1_AND_2) {
-    printf("actual   = %lf, %lf\n\n", actual[0], actual[1]);
-    $assert(expected[0] == actual[0]);
-    $assert(expected[1] == actual[1]);
+    $print("actual   = ", actual, "\n", "expected = ", expected, "\n\n");
+    $assert($equals(&actual, &expected), "Actual and expected are not equal\n");
   } else {
-    printf("actual   = %lf\n\n", actual[0]);
-    $assert(expected[0] == actual[0]);
+    $print("actual   = ", actual[0], "\n", "expected = ", expected[0], "\n\n");
+    $assert($equals(&actual[0], &expected[0]), "Actual and expected are not equal\n");
   }
-  $assert(err_expected == err_actual);
   vec_destroy_seq(p_x);
   MPI_Finalize();
 }

@@ -7,10 +7,10 @@ PetscErrorCode VecMin(Vec x, PetscInt *p, PetscReal *val);
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
 
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE X_Real[N], X_Imag[N];
-#else
 $input CIVL_RTYPE X_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N];
+#else
 #endif
 
 int main() {
@@ -24,32 +24,29 @@ int main() {
   CIVL_RTYPE actual, expected;
 
   if (rank == 0) {
-    for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
-#else
-      x_values[i] = X_Real[i];
-#endif
-    }
+    for (int i = 0; i < N; i++)
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
 
     x = $vec_make_from_dense(N, x_values);
 
-    $print("Vector x:\n");
+    $print("\nN = ", N, "\nx: ");
     $vec_print(x);
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecMin(p_x, &p_actual, &actual);
-  PetscErrorCode err_expected = VecMin_spec(p_x, &p_expected, &expected);
+  VecMin_spec(p_x, &p_expected, &expected);
 
-  $assert(err_actual == err_expected);
+  $assert(err_actual == 0);
   $assert(p_actual == p_expected);
   $assert(actual == expected);
 
-  if (rank == 0)
+  if (rank == 0){
+    $print("\n");
     $pathCondition();
-  $print("\nActual Vec Max   = ", actual, " at index ", p_actual, "\n",
-         "Expected Vec Max = ", expected, " at index ", p_expected, "\n\n");
+    $print("\nActual Vec Min = ", actual, " at index ", p_actual, "\n",
+         "Expected Vec Min = ", expected, " at index ", p_expected, "\n");
+  }
 
   VecDestroy(&p_x);
   MPI_Finalize();

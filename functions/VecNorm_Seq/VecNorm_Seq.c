@@ -57,5 +57,7 @@ PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z) {
   z[0] = ztmp[0];
   if (type == NORM_1_AND_2)
     z[1] = ztmp[1];
+/*   else
+    z[1] = 0.0; */
   PetscFunctionReturn(PETSC_SUCCESS);
 }

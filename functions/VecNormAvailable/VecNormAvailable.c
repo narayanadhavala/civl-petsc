@@ -1,4 +1,5 @@
 #include <petscvec.h>
+#undef VecNormAvailable
 
 PetscErrorCode VecNormAvailable(Vec x, NormType type, PetscBool *available,
                                 PetscReal *val) {

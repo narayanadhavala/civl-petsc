@@ -61,6 +61,8 @@ $vec $vec_concat($vec vec1, $vec vec2) {
 }
 
 $vec $vec_subseq($vec vec, int first, int n) {
+  $print("first = ", first, " n = ", n," vec length = ", vec.len,"\n");
+  $vec_print(vec);
   $assert(first >= 0 && first + n <= vec.len, "Invalid subsequence range");
   $vec result;
   result.len = n;
@@ -84,6 +86,11 @@ CIVL_RTYPE $vec_norm($vec vec, int p) {
       result += scalar_abs(vec.data[i]) * scalar_abs(vec.data[i]);
     }
     result = sqrt(result);
+  } else if (p > 0) {
+    for (int i = 0; i < vec.len; i++) {
+      result += $pow(scalar_abs(vec.data[i]), p);
+    }
+    result = $pow(result, 1.0 / (double)p);
   } else {
     $assert(0, "Invalid norm type");
     return 0;

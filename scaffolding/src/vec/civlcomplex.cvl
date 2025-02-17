@@ -1,5 +1,6 @@
 #include "civlcomplex.cvh"
 #include <math.h>
+#include <scalars.cvh>
 
 $complex $cadd($complex x, $complex y) {
   return ($complex){x.real + y.real, x.imag + y.imag};
@@ -28,7 +29,8 @@ $complex $conj($complex x) {
 }
 
 CIVL_RTYPE $cabs($complex x) {
-  return sqrt(x.real * x.real + x.imag * x.imag);
+  CIVL_RTYPE sum = x.real * x.real + x.imag * x.imag;
+  return sum == 0.0 ? 0.0 : sqrt(sum);
 }
 
 void $cprint($complex x) {

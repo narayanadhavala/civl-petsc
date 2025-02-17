@@ -44,11 +44,11 @@ PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
     } else {
       PetscCall(VecScale(y, beta));
     }
-
     for (PetscInt i = 0; i < nv; ++i)
       PetscCall(VecLockReadPop(x[i]));
   } else { // no maxpby
-    if ($is_scalar_zero(beta))
+           // used the scalar_eq to compare the complex & real numbers
+    if (scalar_eq(scalar_of(0), beta))
       PetscCall(VecSet(y, scalar_of(1)));
     else
       PetscCall(VecScale(y, beta));

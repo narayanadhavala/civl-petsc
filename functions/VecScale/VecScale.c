@@ -12,7 +12,8 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
   PetscValidType(x, 1);
   VecCheckAssembled(x);
   // PetscCall(VecSetErrorIfLocked(x, 1));
-  if ($is_scalar_one(alpha))
+  // used the scalar_eq to compare the complex & real numbers
+  if (scalar_eq(scalar_of(1), alpha))
     PetscFunctionReturn(PETSC_SUCCESS);
 
   /* get current stashed norms */

@@ -27,7 +27,8 @@ PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
 
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
-  if ($is_scalar_zero(alpha)) {
+  // used the scalar_eq to compare the complex & real numbers
+  if (scalar_eq(scalar_of(0), alpha)) {
     PetscCall(VecCopyAsync_Private(y, w, dctx));
   } else {
     PetscCall(PetscLogEventBegin(VEC_WAXPY, x, y, w, 0));

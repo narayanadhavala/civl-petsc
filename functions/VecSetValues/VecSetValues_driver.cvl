@@ -15,11 +15,9 @@ $assume(0 <= ni && ni <= B); // Assume ni is valid and within bounds
 $assume($forall (int j : 0..ni - 1)(0 <= ix[j] && ix[j] < N));
 $assume($forall (int j : 0..ni - 1) $forall (int k: 0..j - 1) ix[j] != ix[k]);
 
+$input CIVL_RTYPE Y_Real[ni], X_Real[N];
 #ifdef USE_COMPLEX
-    $input CIVL_RTYPE Y_Real[ni], Y_Imag[ni], X_Real[N], X_Imag[N];
-#else
-    $input CIVL_RTYPE Y_Real[ni],
-    X_Real[N];
+$input CIVL_RTYPE Y_Imag[ni], X_Imag[N];
 #endif
 
 int main() {
@@ -35,21 +33,26 @@ int main() {
     STYPE x_values[N];
 
     for (int i = 0; i < N; i++)
-      x_values[i] = $cmake(X_Real[i], X_Imag[i]);
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
 
     for (int i = 0; i < ni; i++)
-      y_values[i] = $cmake(Y_Real[i], Y_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
 
     x = $vec_make_from_dense(N, x_values);
 
-    $print("Initial Vector x:\n");
+    $print("\nN = ", N, ", ni = ", ni, "\n");
+    $print("Array of values y: [");
+    for (int i = 0; i < ni; i++) {
+      scalar_print(y_values[i]);
+      if (i < (ni - 1)) $print(", ");
+    }
+    $print("] at Indices ix: [");
+    for (int i = 0; i < ni; i++) {
+      $print(ix[i]);
+      if (i < (ni - 1)) $print(", ");
+    }
+    $print("]\nx: ");
     $vec_print(x);
-    $print("\nValues to insert (y):\n");
-    for (int i = 0; i < ni; i++)
-      $cprint(y_values[i]);
-    $print("\nIndices (ix):\n");
-    for (int i = 0; i < ni; i++)
-      $print("ix[", i, "] = ", ix[i], "\n");
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
@@ -57,21 +60,18 @@ int main() {
 
   PetscErrorCode err_actual =
       VecSetValues(p_x, ni, ix, y_values, INSERT_VALUES);
-  PetscErrorCode err_expected =
-      VecSetValues_spec(expected, ni, ix, y_values, INSERT_VALUES);
+  VecSetValues_spec(expected, ni, ix, y_values, INSERT_VALUES);
 
-  $assert(err_actual == err_expected, "Error codes do not match.");
-  PetscBool flg;
-  VecEqual(p_x, expected, &flg);
-  $assert(flg, "Vector Value mismatch after VecSetValues.");
-
-  if (rank == 0) {
+  $assert(err_actual == 0);
+    if (rank == 0) {
     $print("\n");
     $pathCondition();
   }
-  vecprint_mpi("\nActual   VecSetValues", p_x);
-  vecprint_mpi("\nExpected VecSetValues", expected);
-  $print("\n");
+  vecprint_mpi("Actual  ", p_x);
+  vecprint_mpi("Expected", expected);
+  PetscBool flg;
+  VecEqual(p_x, expected, &flg);
+  $assert(flg, "Vector Value mismatch after VecSetValues.");
 
   VecDestroy(&p_x);
   VecDestroy(&expected);

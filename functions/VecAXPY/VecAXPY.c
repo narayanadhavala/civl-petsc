@@ -13,7 +13,8 @@ PetscErrorCode VecAXPYAsync_Private(Vec y, PetscScalar alpha, Vec x,
   VecCheckAssembled(x);
   VecCheckAssembled(y);
   PetscValidLogicalCollectiveScalar(y, alpha, 2);
-  if ($is_scalar_zero(alpha))
+  // used the scalar_eq to compare the complex & real numbers
+  if (scalar_eq(scalar_of(0), alpha))
     PetscFunctionReturn(PETSC_SUCCESS);
   // PetscCall(VecSetErrorIfLocked(y, 1));
   if (x == y) {

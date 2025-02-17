@@ -8,6 +8,11 @@ PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max);
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
 
+$input CIVL_RTYPE X_Real[N], Y_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N];
+#endif
+
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
@@ -20,33 +25,28 @@ int main(void) {
     // Populate input values
     STYPE x_values[N], y_values[N];
     for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex((double)(i + 1), 0.0);
-      y_values[i] = $make_complex((double)(i + 2), 0.0);
-#else
-      x_values[i] = (double)(i + 1);
-      y_values[i] = (double)(i + 2);
-#endif
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
     }
     // Create vectors from input values
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
-    $print("N = ", N, "\n");
-    $print("Vector x: ");
+    $print("\nN = ", N, "\nx: ");
     $vec_print(x);
-    $print("\nVector y: ");
+    $print("\ny: ");
     $vec_print(y);
   }
-  PetscReal max_actual, max_expected;
+
+  CIVL_RTYPE max_actual, max_expected;
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecMaxPointwiseDivide(p_x, p_y, &max_actual);
-  PetscErrorCode err_expected = VecMaxPointwiseDivide_spec(p_x, p_y, &max_expected);
-  $assert(err_actual == err_expected);
+  VecMaxPointwiseDivide_spec(p_x, p_y, &max_expected);
+  $assert(err_actual == 0);
   if (rank == 0) {
-    //$pathCondition();
-    $print("\nMax actual   = ", max_actual, "\n");
-    $print("Max expected = ", max_expected, "\n\n");
+    $print("\n");
+    $pathCondition();
+    $print("\nMax actual   = ", max_actual, "\n\nMax expected = ", max_expected, "\n");
     $assert(max_actual == max_expected);
   }
   // Clean up

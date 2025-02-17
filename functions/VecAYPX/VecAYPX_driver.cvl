@@ -7,11 +7,9 @@ PetscErrorCode VecAYPX(Vec y, PetscScalar beta, Vec x);
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
 
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE X_Real[N], X_Imag[N], Y_Real[N], Y_Imag[N], beta_Real,
-    beta_Imag;
-#else
 $input CIVL_RTYPE X_Real[N], Y_Real[N], beta_Real;
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N], beta_Imag;
 #endif
 
 int main(void) {
@@ -20,99 +18,47 @@ int main(void) {
   int rank;
   MPI_Comm_rank(comm, &rank);
   // Vectors x and y
-  $vec x = $vec_zero(N);
-  $vec y = $vec_zero(N);
-  $vec z = $vec_zero(N);
+  $vec x = $vec_zero(N), y = $vec_zero(N);
 
-  STYPE x_values[N], y_values[N], beta, expected[N];
-
-#ifdef USE_COMPLEX
-  beta = $make_complex(beta_Real, beta_Imag);
-#else
-  beta = beta_Real;
-#endif
+  STYPE x_values[N], y_values[N], beta; 
+  beta = scalar_make(beta_Real, beta_Imag);
 
   if (rank == 0) {
     for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
-      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
-      expected[i] = $make_complex(0.0, 0.0);
-#else
-      x_values[i] = X_Real[i];
-      y_values[i] = Y_Real[i];
-      expected[i] = 0.0;
-#endif
-    }
-
-        // Calculate expected results based on the value of beta
-    for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      if ($creal(beta) == 0.0 && $cimag(beta) == 0.0) {
-        // beta == 0: y remains unchanged
-        expected[i] = y_values[i];
-      } else if ($creal(beta) == 1.0 && $cimag(beta) == 0.0) {
-        // beta == 1: y = y + x
-        expected[i] = $cadd(y_values[i], x_values[i]);
-      } else if ($creal(beta) == -1.0 && $cimag(beta) == 0.0) {
-        // beta == -1: y = y - x
-        expected[i] = $csub(y_values[i], x_values[i]);
-      } else {
-        // y = beta * y + x
-        STYPE scaled_y = $cmul(beta, y_values[i]);
-        expected[i] = $cadd(scaled_y, x_values[i]);
-      }
-#else
-      if (beta == 0.0) {
-        // beta == 0: y remains unchanged
-        expected[i] = y_values[i];
-      } else if (beta == 1.0) {
-        // beta == 1: y = y + x
-        expected[i] += x_values[i];
-      } else if (beta == -1.0) {
-        // beta == -1: y = y - x
-        expected[i] -= x_values[i];
-      } else {
-        // y = beta * y + x
-        expected[i] = beta * y_values[i] + x_values[i];
-      }
-#endif
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
     }
 
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
-    z = $vec_make_from_dense(N, y_values);
 
-    $print("CIVL:");
-    $print("Vector x:\n");
+    $print("\nN = ", N,"\nx: ");
     $vec_print(x);
-    $print("Vector y:\n");
+    $print("\ny: ");
     $vec_print(y);
-    $print("Vector z:\n");
-    $vec_print(z);
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec expectedAYPX = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec expectedAYPX = civlToPetscVec(y, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecAYPX(p_y, beta, p_x);
-  PetscErrorCode err_expected = VecAYPX_spec(expectedAYPX, beta, p_x);
-  $assert(err_actual == err_expected);
-  bool flg;
-  VecEqual(p_y, expectedAYPX, &flg);
-  $assert(flg == $true,
-          "VecAYPX mismatch between actual and expected results.");
+  VecAYPX_spec(expectedAYPX, beta, p_x);
+  $assert(err_actual == 0);
   if (rank == 0) {
     $print("\n");
     $pathCondition();
   }
-  vecprint_mpi("\nActual   AYPX", p_y);
-  vecprint_mpi("\nExpected AYPX", expectedAYPX);
+  vecprint_mpi("Actual   AYPX", p_y);
+  vecprint_mpi("Expected AYPX", expectedAYPX);
+
+  bool flg;
+  VecEqual(p_y, expectedAYPX, &flg);
+  $assert(flg,
+          "VecAYPX mismatch between actual and expected results.");
 
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   VecDestroy(&expectedAYPX);
 
   MPI_Finalize();
-  return 0;
 }

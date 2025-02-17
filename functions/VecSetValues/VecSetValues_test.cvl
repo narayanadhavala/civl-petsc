@@ -16,87 +16,76 @@ CIVL_RTYPE X_Real[N] = {0.0, 0.0, 0.0, 0.0, 0.0};
 #endif
 
 int main() {
-    MPI_Init(NULL, NULL);
-    MPI_Comm comm = MPI_COMM_WORLD;
-    int rank;
-    MPI_Comm_rank(comm, &rank);
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-    // Initialize vectors x and y as zero vectors
-    $vec x = $vec_zero(N), y = $vec_zero(N);
+  // Initialize vectors x and y as zero vectors
+  $vec x = $vec_zero(N), y = $vec_zero(N);
 
-    PetscScalar y_values[ni];
-    PetscScalar x_values[N];
+  STYPE y_values[ni], x_values[N];
 
-    // Process 0 initializes x_values and broadcasts to all processes
-    if (rank == 0) {
-        for (int i = 0; i < N; i++) {
-    #ifdef USE_COMPLEX
-            x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
-    #else
-            x_values[i] = X_Real[i];
-    #endif
-        }
+  // Process 0 initializes x_values and broadcasts to all processes
+  if (rank == 0) {
+    for (int i = 0; i < N; i++)
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
 
-        for (int i = 0; i < ni; i++) {
-    #ifdef USE_COMPLEX
-            y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
-    #else
-            y_values[i] = Y_Real[i];
-    #endif
-        }
-    }
+    for (int i = 0; i < ni; i++)
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
 
     // Broadcast x_values and y_values from process 0 to all processes
-    MPI_Bcast(x_values, N * sizeof(PetscScalar), MPI_BYTE, 0, comm);
-    MPI_Bcast(y_values, ni * sizeof(PetscScalar), MPI_BYTE, 0, comm);
+    // MPI_Bcast(x_values, N * sizeof(PetscScalar), MPI_BYTE, 0, comm);
+    // MPI_Bcast(y_values, ni * sizeof(PetscScalar), MPI_BYTE, 0, comm);
 
     // All processes create vector x from x_values
     x = $vec_make_from_dense(N, x_values);
 
     // All processes set their expected vector y using y_values
-    for (int i = 0; i < ni; i++) {
-        y = $vec_set(y, ix[i], y_values[i]);
-    }
+    for (int i = 0; i < ni; i++)
+      y = $vec_set(y, ix[i], y_values[i]);
 
-    if (rank == 0) {
-        $print("Initial Vector x:\n");
-        $vec_print(x);
-        $print("\nExpected Vector y after VecSetValues:\n");
-        $vec_print(y);
-        $print("Values to insert (y):\n");
-        for (int i = 0; i < ni; i++)
-            $cprint(y_values[i]);
-        $print("Indices (ix):\n");
-        for (int i = 0; i < ni; i++)
-            $print("ix[", i, "] = ", ix[i], "\n");
-    }
+    $print("Initial Vector x:\n");
+    $vec_print(x);
+    $print("\nExpected Vector y after VecSetValues:\n");
+    $vec_print(y);
+    $print("Values to insert (y):");
+    for (int i = 0; i < ni; i++)
+      $print(y_values[i], " ");
+    $print(" at Indices (ix):");
+    for (int i = 0; i < ni; i++)
+      $print("ix[", i, "] = ", ix[i], " ");
+    $print("\n");
+  }
+  $print("Before converting x\n");
+  // Convert CIVL vectors to PETSc vectors
+  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
+  $print("Before converting y\n");
+  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  $print("Before converting x & y\n");
 
-    // Convert CIVL vectors to PETSc vectors
-    Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-    Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  // Apply VecSetValues to the actual vector
+  PetscErrorCode err_actual =
+      VecSetValues(actual, ni, ix, y_values, INSERT_VALUES);
+  $assert(err_actual == 0, "VecSetValues failed.");
 
-    // Apply VecSetValues to the actual vector
-    PetscErrorCode err_actual =
-        VecSetValues(actual, ni, ix, y_values, INSERT_VALUES);
-    $assert(err_actual == 0, "VecSetValues failed.");
+  // Verify the results by comparing actual and expected vectors
+  PetscBool flg;
+  VecEqual(actual, expected, &flg);
+  $assert(flg, "Vector Value mismatch after VecSetValues.");
 
-    // Verify the results by comparing actual and expected vectors
-    PetscBool flg;
-    VecEqual(actual, expected, &flg);
-    $assert(flg, "Vector Value mismatch after VecSetValues.");
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+  }
 
-    if (rank == 0) {
-        $print("\n");
-        $pathCondition();
-    }
+  // Print the actual and expected vectors for verification
+  vecprint_mpi("\nActual   VecSetValues", actual);
+  vecprint_mpi("\nExpected VecSetValues", expected);
 
-    // Print the actual and expected vectors for verification
-    vecprint_mpi("\nActual   VecSetValues", actual);
-    vecprint_mpi("\nExpected VecSetValues", expected);
+  // Destroy the PETSc vectors to free memory
+  VecDestroy(&actual);
+  VecDestroy(&expected);
 
-    // Destroy the PETSc vectors to free memory
-    VecDestroy(&actual);
-    VecDestroy(&expected);
-
-    MPI_Finalize();
+  MPI_Finalize();
 }

@@ -19,7 +19,7 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val) {
     PetscCall(PetscInfo(x, "Vector with Inf or Nan norm can not be normalized; "
                            "Returning only the norm\n"));
   } else {
-    PetscScalar s = (PetscScalar)(1.0 / norm);
+    PetscScalar s = scalar_of(1.0 / norm);
     PetscCall(VecScale(x, s));
   }
   PetscCall(PetscLogEventEnd(VEC_Normalize, x, 0, 0, 0));

@@ -14,10 +14,9 @@ $input int ni, B;
 $assume(0 <= B && B <= N);
 $assume(0 <= ni && ni <= B);
 
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE X_Real[N], X_Imag[N];
-#else
 $input CIVL_RTYPE X_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N];
 #endif
 
 int main() {
@@ -33,11 +32,11 @@ int main() {
     STYPE x_values[N];
 
     for (int i = 0; i < N; i++)
-      x_values[i] = $cmake(X_Real[i], X_Imag[i]);
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
 
     x = $vec_make_from_dense(N, x_values);
 
-    $print("Initial Vector x:\n");
+    $print("N = ", N, "\nx: ");
     $vec_print(x);
     chosen_proc = $choose_int(nprocs);
   }
@@ -50,15 +49,28 @@ int main() {
     int ix[ni];
     STYPE retrieved_values[ni], expected_values[ni];
     int elements_owned = ((p_x->map->rend) - (p_x->map->rstart));
-    for (int j = 0; j < ni; j++)
+    $print("\n[Process ", chosen_proc, "] N = ", N, ", ni = ", ni, "\n");
+    for (int j = 0; j < ni; j++){
       ix[j] = p_x->map->rstart + $choose_int(elements_owned);
+    }
+    $print("\nIndices ix: ");
+    for (int j = 0; j < ni; j++) {
+      $print(ix[j], " ");
+    }
+
     // Retrieve values using VecGetValues
     PetscErrorCode err_actual = VecGetValues(p_x, ni, ix, retrieved_values);
     $assert(err_actual == 0);
     VecGetValues(p_x, ni, ix, expected_values);
-    $print("\nExpected Values = ", expected_values,
-           "\nActual Values = ", retrieved_values, "\n\n");
-    $equals(&retrieved_values, &expected_values);
+
+    $print("\nActual  : ");
+    for (int i = 0; i < ni; i++)
+      $print(retrieved_values[i], " ");
+    $print("\nExpected: ");
+    for (int i = 0; i < ni; i++)
+      $print(expected_values[i], " ");
+    $print("\n");
+    $assert($equals(&retrieved_values, &expected_values), "VecGetValues mismatch between actual and expected values.");
   }
 
   VecDestroy(&p_x);

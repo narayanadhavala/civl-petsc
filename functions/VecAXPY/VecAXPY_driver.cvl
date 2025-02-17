@@ -28,7 +28,8 @@ int main(void) {
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
     z = $vec_make_from_dense(N, y_values);
-    $print("Vector x: "); $vec_print(x);
+
+    $print("\nN =", N,"\nVector x: "); $vec_print(x);
     $print("Vector y: "); $vec_print(y);
   }
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
@@ -37,8 +38,8 @@ int main(void) {
   PetscErrorCode err_actual = VecAXPY(p_y, alpha, p_x),
                  err_expected = VecAXPY_spec(expectedAXPY, alpha, p_x);
   $assert(err_actual == err_expected);
-  vecprint_mpi("\nActual   AXPY", p_y);
-  vecprint_mpi("\nExpected AXPY", expectedAXPY);
+  vecprint_mpi("Actual   AXPY", p_y);
+  vecprint_mpi("Expected AXPY", expectedAXPY);
   bool flg;
   VecEqual(p_y, expectedAXPY, &flg);
   $assert(flg, "VecAXPY mismatch between actual and expected results.");

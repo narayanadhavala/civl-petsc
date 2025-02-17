@@ -26,18 +26,16 @@ typedef double PetscReal;
 // Operations on complex numbers that also make sense for reals...
 #ifdef USE_COMPLEX
 typedef STYPE PetscScalar;
-#define PetscConj(a) scalar_conj(x)
+#define PetscConj(a) scalar_conj(a)
 #define PetscImaginaryPart(a) ((a).imag)
 #define PetscRealPart(a) ((a).real)
 #define PetscAbsScalar(a) scalar_abs(a)
-#define $cmake(x, y) $make_complex(x, y)
 #else
 typedef PetscReal PetscScalar;
-#define PetscConj(a) scalar_conj(x)
+#define PetscConj(a) scalar_conj(a)
 #define PetscImaginaryPart(a) ((PetscReal)(0))
 #define PetscRealPart(a) (a)
 #define PetscAbsScalar(a) fabs(a)
-#define $cmake(x, y) (x)
 #endif
 
 // PETSc's Boolean values
@@ -72,6 +70,20 @@ typedef int VecType;
 #define VECMPI 2
 #define VECSTANDARD 3
 
+/*
+  PetscCopyMode - Specifies how an array or `PetscObject` is copied or retained
+  by an aggregate `PetscObject`.
+
+  Parameters:
+  - PETSC_COPY_VALUES  The array values are copied into new space. The user is
+  free to reuse or delete the passed-in array.
+  - PETSC_OWN_POINTER  The array values are not copied. The object takes
+  ownership of the array and will free it later. The user cannot modify or
+  delete the array. The array must have been allocated with `PetscMalloc()`.
+  - PETSC_USE_POINTER  The array values are not copied. The object uses the
+  array but does not take ownership of it. The user must ensure that the array
+  remains valid for the object's lifetime and must free it after use.
+ */
 typedef enum {
   PETSC_COPY_VALUES,
   PETSC_OWN_POINTER,
@@ -79,6 +91,10 @@ typedef enum {
 } PetscCopyMode;
 
 #define NUM_NORM_TYPES 5
+
+#define PETSCHEADER(ObjectOps)                                                 \
+  struct _p_PetscObject hdr;                                                   \
+  ObjectOps ops[1]
 
 typedef enum {
   IS_INFO_UNKNOWN = 0,
@@ -104,6 +120,25 @@ typedef struct _p_PetscObject *PetscObject;
 struct _n_PetscObjectList;
 typedef struct _n_PetscObjectList *PetscObjectList;
 
+/* IS - Abstract PETSc object used for efficient indexing into vector and
+ * matrices */
+typedef struct _p_IS *IS;
+
+struct _p_IS {
+  PETSCHEADER(struct _ISOps);
+  // SimpleMap map;
+  PetscInt max, min; /* range of possible values */
+  void *data;
+  PetscInt *total, *nonlocal; /* local representation of ALL indices across the
+                                 comm as well as the nonlocal part. */
+  PetscInt
+      local_offset; /* offset to the local part within the total index set */
+  IS complement;    /* IS wrapping nonlocal indices. */
+  PetscBool info_permanent[2][IS_INFO_MAX]; /* whether local / global properties
+                                               are permanent */
+  ISInfoBool info[2][IS_INFO_MAX];          /* local / global properties */
+};
+
 // Definition of struct _n_PetscObjectList
 struct _n_PetscObjectList {
   char name[256];
@@ -124,10 +159,6 @@ struct _p_PetscObject {
   PetscReal *realcomposeddata; // Array of data
 };
 
-#define PETSCHEADER(ObjectOps)                                                 \
-  struct _p_PetscObject hdr;                                                   \
-  ObjectOps ops[1]
-
 // A component of a Vec struct specifying how the vector is
 // distributed across processes.
 typedef struct map_s {
@@ -135,6 +166,7 @@ typedef struct map_s {
   PetscInt N;            // global_size
   PetscInt rstart, rend; // local start, local end + 1
   PetscInt bs;           // for now assuming the block size as 1
+  PetscInt nproc;
 } *SimpleMap;
 
 // Now we can define Vec_s using PETSCHEADER
@@ -230,6 +262,11 @@ struct _p_PetscDeviceContext {
 
 #ifndef __isfinitef
 #define __isfinitef(x) 1
+#endif
+
+/* In some header or a place before math.h is included: */
+#ifndef __isfinitel
+#define __isfinitel(x) 1
 #endif
 
 #define PETSC_COMM_SELF MPI_COMM_SELF
@@ -372,6 +409,8 @@ typedef enum INSERT_MODE {
 
 #define VEC_CLASSID 123
 
+#define IS_CLASSID 124
+
 PetscErrorCode PetscError(MPI_Comm comm, int line, const char *func,
                           const char *file, PetscErrorCode n, int p,
                           const char *mess, ...);
@@ -478,7 +517,7 @@ PetscErrorCode PetscValidHeaderSpecific(void *x, PetscClassId cid, int arg);
   } while (0)
 
 #define PetscMalloc1(m1, r1)                                                   \
-  (*(r1) = malloc((m1) * sizeof(**(r1))), PETSC_SUCCESS)
+  (*(r1) = malloc((m1) * sizeof(*(r1))), PETSC_SUCCESS)
 
 PetscErrorCode PetscObjectComposedDataGetReal(PetscObject obj, PetscInt id,
                                               PetscReal *data, PetscBool *flag);
@@ -493,10 +532,6 @@ PetscErrorCode PetscInfo_Private(PetscObject obj, const char message[]);
 PetscBool PetscIsInfOrNanReal(PetscReal v);
 
 int __isfinited(double x);
-
-bool $is_scalar_zero(PetscScalar alpha);
-
-bool $is_scalar_one(PetscScalar alpha);
 
 bool $is_lessthan(PetscScalar alpha, double n);
 
@@ -671,6 +706,14 @@ PetscBool PetscIsNanReal(PetscReal a);
         ar1, (x)->map->n, ar2, (y)->map->n);                                   \
   } while (0)
 
+#define PetscFree(a)                                                           \
+  do {                                                                         \
+    if (!(a))                                                                  \
+      return 0;                                                                \
+    free(a);                                                                   \
+    (a) = NULL;                                                                \
+  } while (0)
+
 PetscBool PetscIsNanScalar(PetscScalar v);
 
 PetscBool PetscEqualReal(PetscReal a, PetscReal b);
@@ -841,6 +884,64 @@ PetscErrorCode PetscSplitOwnership(MPI_Comm comm, PetscInt *n, PetscInt *N);
   Note: Sets the local and global sizes in the vector's map.
  */
 PetscErrorCode VecSetSizes(Vec v, PetscInt n, PetscInt N);
+
+/*
+  VecSetUp - Initializes the vector type and sets up internal data structures.
+
+  Parameters:
+  - v Vector to be set up.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: If the vector type is not set, it is initialized based on the number of
+  processes.
+*/
+PetscErrorCode VecSetUp(Vec v);
+
+/*
+  VecGetSubVector - Extracts a subvector from a given vector based on an index
+  set.
+
+  Parameters:
+  - X  Input vector.
+  - is Index set defining the portion of `X` to extract.
+  - Y  Output subvector.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: Converts `X` to `$vec`, extracts the required subsequence using
+  `$vec_subseq`, and converts the result back to a PETSc `Vec` using
+  `civlToPetscVecCopy`.
+ */
+PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y);
+
+/*
+  VecRestoreSubVector - Restores a subvector obtained using VecGetSubVector.
+
+  Parameters:
+  - X  Original vector from which the subvector was obtained.
+  - is Index set representing the subset of `X`.
+  - Y  Subvector to be restored.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: If the subvector's state has not changed, this function simply destroys
+  it.
+ */
+PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y);
+
+/*
+  ISDestroy - Destroys an index set and deallocates its resources.
+
+  Parameters:
+  - is The index set to be destroyed.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: This function frees the allocated memory for index sets, including
+        local and nonlocal arrays.
+ */
+PetscErrorCode ISDestroy(IS *is);
 
 /*
   Sets the block size of a vector.
@@ -1349,9 +1450,28 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
  */
 PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[],
                                    const PetscScalar y[], InsertMode iora);
+/*
+  ISCreateGeneral - Creates an index set from an array of integers.
 
-// PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS
-// *x_is[]);
+  Parameters:
+  - comm  The MPI communicator.
+  - n     The number of indices.
+  - idx   The array of indices.
+  - mode  Copy mode (`PETSC_COPY_VALUES`, `PETSC_OWN_POINTER`, or
+  `PETSC_USE_POINTER`).
+  - is    The newly created index set.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: This function allocates and initializes an `IS` structure.
+ */
+PetscErrorCode ISCreateGeneral(MPI_Comm comm, PetscInt n, const PetscInt idx[],
+                               PetscCopyMode mode, IS *is);
+
+PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
+                              PetscInt step, IS *is);
+
+PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]);
 
 /*
   Retrieves values from specified locations of a PETSc vector.
@@ -1383,9 +1503,6 @@ PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[],
   macro.
  */
 PetscErrorCode VecConjugate_Seq(Vec xin);
-
-// PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
-//                               PetscInt step, IS *is);
 
 /*
   Computes the norm of a subvector of a vector defined by a starting point
@@ -1612,11 +1729,35 @@ struct _VecOps {
   PetscErrorCode (*maxpby)(Vec, PetscInt, const PetscScalar *, PetscScalar,
                            Vec *);  /* y = beta y + alpha[j] x[j] */
   PetscErrorCode (*copy)(Vec, Vec); /* y = x */
-  // PetscErrorCode (*concatenate)(PetscInt, const Vec[], Vec *, IS *[]);
+  PetscErrorCode (*concatenate)(PetscInt, const Vec[], Vec *, IS *[]);
+  PetscErrorCode (*getsubvector)(Vec, IS, Vec *);
 };
 
-/* struct _ISOps {
+struct _ISOps {
   PetscErrorCode (*duplicate)(IS, IS *);
-}; */
+  /*PetscErrorCode (*getindices)(IS, const PetscInt *[]);
+  PetscErrorCode (*restoreindices)(IS, const PetscInt *[]);
+  PetscErrorCode (*invertpermutation)(IS, PetscInt, IS *);
+  PetscErrorCode (*sort)(IS);
+  PetscErrorCode (*sortremovedups)(IS);
+  PetscErrorCode (*sorted)(IS, PetscBool *);
+  PetscErrorCode (*destroy)(IS);
+  PetscErrorCode (*view)(IS, PetscViewer);
+  PetscErrorCode (*load)(IS, PetscViewer);
+  PetscErrorCode (*copy)(IS, IS);
+  PetscErrorCode (*togeneral)(IS);
+  PetscErrorCode (*oncomm)(IS, MPI_Comm, PetscCopyMode, IS *);
+  PetscErrorCode (*setblocksize)(IS, PetscInt);
+  PetscErrorCode (*contiguous)(IS, PetscInt, PetscInt, PetscInt *, PetscBool *);
+  PetscErrorCode (*locate)(IS, PetscInt, PetscInt *);
+  PetscErrorCode (*sortedlocal)(IS, PetscBool *);
+  PetscErrorCode (*sortedglobal)(IS, PetscBool *);
+  PetscErrorCode (*uniquelocal)(IS, PetscBool *);
+  PetscErrorCode (*uniqueglobal)(IS, PetscBool *);
+  PetscErrorCode (*permlocal)(IS, PetscBool *);
+  PetscErrorCode (*permglobal)(IS, PetscBool *);
+  PetscErrorCode (*intervallocal)(IS, PetscBool *);
+  PetscErrorCode (*intervalglobal)(IS, PetscBool *); */
+};
 
 #endif
