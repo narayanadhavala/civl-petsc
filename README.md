@@ -52,17 +52,6 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
     │       └── petscvec.c
     └── test
         ├── civlcomplex_test.cvl
-        ├── CIVLREP
-        │   ├── civlcomplex_test_ProverOutput.txt
-        │   ├── civlvec_test_0.trace
-        │   ├── civlvec_test_log.txt
-        │   ├── civlvec_test_ProverOutput.txt
-        │   ├── equals_0.trace
-        │   ├── equals_log.txt
-        │   ├── petscToCivl_ProverOutput.txt
-        │   ├── vectorOwnershipTest_0.trace
-        │   ├── vectorOwnershipTest_log.txt
-        │   └── vectorOwnershipTest_ProverOutput.txt
         ├── civlvec_test.cvl
         ├── equals.c
         ├── Makefile
