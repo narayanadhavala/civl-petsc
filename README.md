@@ -1,6 +1,6 @@
 # CIVL-PETSc Verification Project
 
-This repository is being used to explore the application of CIVL to PETSc (Portable, Extensible Toolkit for Scientific Computation). The structure may change frequently as the project evolves.
+This repository is being used to explore the application of CIVL to PETSc (Portable, Extensible Toolkit for Scientific Computation).  **Before running this project, you must install CIVL.** Please follow the [CIVL installation instructions](https://vsl.cis.udel.edu/trac/civl/wiki/Introduction) before proceeding.
 
 ## Current Structure
 ```
