@@ -5,7 +5,6 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 ## Current Structure
 ```
 .
-├── build_functions.sh
 ├── common.mk
 ├── examples
 │   ├── ex11.c
@@ -23,131 +22,19 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 │   │   ├── VecAXPBYPCZ.c
 │   │   ├── VecAXPBYPCZ_driver.cvl
 │   │   └── VecAXPBYPCZ_test.cvl
-│   ├── VecAXPY
+│   ├── VecAXPBYPCZ_Seq
 │   │   ├── Makefile
-│   │   ├── VecAXPY.c
-│   │   ├── VecAXPY_driver.cvl
-│   │   └── VecAXPY_test.cvl
-│   ├── VecAYPX
-│   │   ├── Makefile
-│   │   ├── VecAYPX.c
-│   │   ├── VecAYPX_driver.cvl
-│   │   └── VecAYPX_test.cvl
-│   ├── VecConcatenate
-│   │   ├── Makefile
-│   │   ├── VecConcatenate.c
-│   │   ├── VecConcatenate_driver.cvl
-│   │   └── VecConcatenate_test.cvl
-│   ├── VecConjugate_Seq
-│   │   ├── Makefile
-│   │   ├── VecConjugate_Seq.c
-│   │   ├── VecConjugate_Seq_driver.cvl
-│   │   └── VecConjugate_Seq_test.c
-│   ├── VecCopy
-│   │   ├── Makefile
-│   │   ├── VecCopy.c
-│   │   ├── VecCopy_driver.cvl
-│   │   └── VecCopy_test.cvl
-│   ├── VecCopy_Seq
-│   │   ├── Makefile
-│   │   ├── VecCopy_Seq.c
-│   │   ├── VecCopy_Seq_driver.cvl
-│   │   └── VecCopy_Seq_test.c
-│   ├── VecDot
-│   │   ├── Makefile
-│   │   ├── VecDot.c
-│   │   ├── VecDot_driver.cvl
-│   │   └── VecDot_test.cvl
-│   ├── VecDotRealPart
-│   │   ├── Makefile
-│   │   ├── VecDotRealPart.c
-│   │   ├── VecDotRealPart_driver.cvl
-│   │   └── VecDotRealPart_test.cvl
-│   ├── VecGetValues
-│   │   ├── Makefile
-│   │   ├── VecGetValues.c
-│   │   ├── VecGetValues_driver.cvl
-│   │   └── VecGetValues_test.cvl
-│   ├── VecMax
-│   │   ├── Makefile
-│   │   ├── VecMax.c
-│   │   ├── VecMax_driver.cvl
-│   │   └── VecMax_test.cvl
-│   ├── VecMAXPBY
-│   │   ├── Makefile
-│   │   ├── VecMAXPBY.c
-│   │   ├── VecMAXPBY_driver.cvl
-│   │   └── VecMAXPBY_test.cvl
-│   ├── VecMaxPointwiseDivide
-│   │   ├── Makefile
-│   │   ├── VecMaxPointwiseDivide.c
-│   │   ├── VecMaxPointwiseDivide_driver.cvl
-│   │   └── VecMaxPointwiseDivide_test.cvl
-│   ├── VecMAXPY
-│   │   ├── Makefile
-│   │   ├── VecMAXPY.c
-│   │   ├── VecMAXPY_driver.cvl
-│   │   └── VecMAXPY_test.cvl
-│   ├── VecMin
-│   │   ├── Makefile
-│   │   ├── VecMin.c
-│   │   ├── VecMin_driver.cvl
-│   │   └── VecMin_test.cvl
-│   ├── VecMTDot
-│   │   ├── Makefile
-│   │   ├── VecMTDot.c
-│   │   ├── VecMTDot_driver.cvl
-│   │   └── VecMTDot_test.cvl
-│   ├── VecNorm
-│   │   ├── Makefile
-│   │   ├── output.txt
-│   │   ├── VecNorm.c
-│   │   └── VecNorm_driver.cvl
-│   ├── VecNormalize
-│   │   ├── Makefile
-│   │   ├── VecNormalize.c
-│   │   ├── VecNormalize_driver.cvl
-│   │   └── VecNormalize_test.cvl
-│   ├── VecNormAvailable
-│   │   ├── Makefile
-│   │   ├── VecNormAvailable.c
-│   │   ├── VecNormAvailable_driver.cvl
-│   │   └── VecNormAvailable_test.c
-│   ├── VecNorm_Seq
-│   │   ├── Makefile
-│   │   ├── VecNorm_Seq.c
-│   │   ├── VecNorm_Seq_driver.cvl
-│   │   └── VecNorm_Seq_test.c
-│   ├── VecScale
-│   │   ├── Makefile
-│   │   ├── VecScale.c
-│   │   ├── VecScale_driver.cvl
-│   │   └── VecScale_test.cvl
-│   ├── VecSet
-│   │   ├── Makefile
-│   │   ├── VecSet.c
-│   │   ├── VecSet_driver.cvl
-│   │   └── VecSet_test.cvl
-│   ├── VecSetValues
-│   │   ├── Makefile
-│   │   ├── VecSetValues.c
-│   │   ├── VecSetValues_driver.cvl
-│   │   └── VecSetValues_test.cvl
-│   ├── VecSetValuesBlocked
-│   │   ├── Makefile
-│   │   ├── VecSetValuesBlocked.c
-│   │   ├── VecSetValuesBlocked_driver.cvl
-│   │   └── VecSetValuesBlocked_test.cvl
-│   ├── VecTDot
-│   │   ├── Makefile
-│   │   ├── VecTDot.c
-│   │   ├── VecTDot_driver.cvl
-│   │   └── VecTDot_test.cvl
-│   └── VecWAXPY
+│   │   ├── VecAXPBYPCZ_Seq.c
+│   │   ├── VecAXPBYPCZ_Seq_driver.cvl
+│   │   └── VecAXPBYPCZ_Seq_test.cvl
+.   .
+.   .
+.   .
+│   └── VecWAXPY_Seq
 │       ├── Makefile
-│       ├── VecWAXPY.c
-│       ├── VecWAXPY_driver.cvl
-│       └── VecWAXPY_test.cvl
+│       ├── VecWAXPY_Seq.c
+│       ├── VecWAXPY_Seq_driver.cvl
+│       └── VecWAXPY_Seq_test.cvl
 ├── Makefile
 ├── README.md
 └── scaffolding
@@ -165,6 +52,17 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
     │       └── petscvec.c
     └── test
         ├── civlcomplex_test.cvl
+        ├── CIVLREP
+        │   ├── civlcomplex_test_ProverOutput.txt
+        │   ├── civlvec_test_0.trace
+        │   ├── civlvec_test_log.txt
+        │   ├── civlvec_test_ProverOutput.txt
+        │   ├── equals_0.trace
+        │   ├── equals_log.txt
+        │   ├── petscToCivl_ProverOutput.txt
+        │   ├── vectorOwnershipTest_0.trace
+        │   ├── vectorOwnershipTest_log.txt
+        │   └── vectorOwnershipTest_ProverOutput.txt
         ├── civlvec_test.cvl
         ├── equals.c
         ├── Makefile
@@ -190,55 +88,21 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 
 ## Verification Process
 
-The verification process leverages a custom shell script to automatically verify the CIVL correctness of function implementations found in the `functions/` directory. Each function is isolated in its own subdirectory and has its own Makefile (with an `all` target) to trigger its CIVL verification. The script automates the discovery of these subdirectories, executes their individual verification routines, and compiles a detailed report.
-
-> **Note:** This process replaces the previous super Makefile approach. Instead of a Makefile, the shell script `build_functions.sh` performs all the required tasks.
+This makefile is designed to automatically run tests on all the function implementations found inside the functions folder. It does this by:
 
 ### How It Works
 
-1. **Automatic Discovery of Function Subdirectories**
-   The script uses the `find` command to list all immediate subdirectories in the `functions/` folder. It excludes hidden directories (those beginning with a dot), as well as directories named `CIVLREP`, ensuring that any new function added to `functions/` is automatically incorporated into the verification process without manual updates.
+1. **Finding Function Folders**  
+   The makefile automatically looks inside the "functions" folder and finds every subfolder—ignoring any hidden folders and the "CIVLREP" folder. This means if we add a new function, it will be picked up automatically.
 
-2. **Per-Function Verification**
-   For each discovered subdirectory, the script:
-   - Prints a colorful header to indicate the start of verification for that function.
-   - Determines the appropriate superset of input flags based on the function's name. For example:
-     - Functions with `_Seq` use sequential inputs.
-     - Functions matching `VecGetValues`, `VecConcatenate`, or `VecSetValues` receive an extra `-inputB=2` flag.
-     - All others use common inputs.
-   - Changes into the function's directory and executes `make all` with the determined inputs.
-   - Captures the complete output (both stdout and stderr) and appends it to a detailed log file (`Summary.log`).
-   - Measures the time taken for the verification of each function and displays this information immediately.
+2. **Running Full Tests**  
+   When user run `make all`, the makefile goes into each of those subfolders and runs a complete set of tests. These tests check different vector sizes (from 1 to 5) and different processor counts (from 1 to 5) for both real and complex cases.
 
-3. **Timing and Statistics**
-   The script records:
-   - **Overall Execution Time:** Capturing start and end times for the entire verification process.
-   - **Individual Function Times:** Each function's execution time is measured and logged.
-   - **Pass/Fail Status:** The script checks for a failure pattern (specifically, the phrase "The program MAY NOT be correct") in the output to determine if the verification passed or failed.
-   - A final summary report is generated in a tabular format, showing:
-     - Total time taken
-     - Total number of functions verified
-     - Individual execution time for each function
-     - The number of functions that passed and failed
+3. **Running Quick Tests**  
+   If user want faster results, running `make runsmall` does a quicker set of tests. It tests with smaller vector sizes (1 to 3) and fewer processor counts (1 and 2), while still checking both real and complex cases.
 
-### Report Generation
-
-- **Console Output:**
-  As the script runs, it outputs colorful, formatted messages for each function's verification. It also displays the final summary in the terminal.
-
-- **Log File:**
-  All details—including the output of each function’s verification, execution times, and the final summary—are saved to `Summary.log`. This log provides a persistent record of the verification process.
-
-### How to Run
-
-Ensure that the script is executable and that you are using Bash (the script will exit if not run with Bash):
-
-```bash
-chmod +x build_functions.sh
-./build_functions.sh
-```
-
-Using this Bash script, developers can quickly verify that all function implementations in the `functions/` directory pass their individual CIVL checks, with any failures immediately identifiable from both the on-screen summary and the log file.
+4. **Cleaning Up**  
+   The `make clean` target goes into each function folder and runs its clean routine.
 
 ## Note
 
