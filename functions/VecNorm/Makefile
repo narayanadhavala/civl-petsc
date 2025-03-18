@@ -9,7 +9,9 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecNorm=VecNorm_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
+all: runbig
+
+runbig: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
 
 runsmall: versmall
 
@@ -63,5 +65,4 @@ versmall: $(DEPS)
 clean:
 	rm -rf *.o *~ *.tmp *.exec CIVLREP *.dSYM
 
-.PHONY: all ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c \
-  clean debug
+.PHONY: all runbig runsmall ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c debug versmall clean

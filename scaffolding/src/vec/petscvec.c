@@ -419,21 +419,13 @@ PetscErrorCode VecDot(Vec x, Vec y, PetscScalar *val) {
 }
 
 PetscErrorCode VecTDot_Seq(Vec x, Vec y, PetscScalar *val) {
-  $assert(x != NULL);
-  $assert(y != NULL);
-  $assert(val != NULL);
-  $assert(x->map->N == y->map->N);
-
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  $vec vec_x = petscToCivlVec(x), vec_y = petscToCivlVec(y);
-
-  for (int i = 0; i < vec_y.len; i++)
-    vec_y.data[i] = scalar_conj(vec_y.data[i]);
-
-  if (rank == 0)
-    *val = $vec_dot(vec_x, vec_y);
-
+  int n = x->map->n;
+  PetscScalar sum = scalar_zero;
+  for (PetscInt i = 0; i < n; i++) {
+    // For transpose dot product, do not conjugate y->data[i]
+    sum = scalar_add(sum, scalar_mul(x->data[i], y->data[i]));
+  }
+  *val = sum;
   x->hdr.state++;
   return 0;
 }
@@ -447,15 +439,15 @@ PetscErrorCode VecTDot_MPI(Vec x, Vec y, PetscScalar *val) {
   VecTDot_Seq(x, y, &local_tdot);
 
 #ifdef USE_COMPLEX
-  double arr[2];
-  arr[0] = local_tdot.real;
-  arr[1] = local_tdot.imag;
+  double in_arr[2], out_arr[2];
+  in_arr[0] = local_tdot.real;
+  in_arr[1] = local_tdot.imag;
   // Reduce the two components (sum across processes)
-  MPI_Bcast(arr, 2, MPI_DOUBLE, 0, x->comm);
-  local_tdot = scalar_make(arr[0], arr[1]);
+  MPIU_Allreduce(in_arr, out_arr, 2, MPI_DOUBLE, MPIU_SUM, x->comm);
+  local_tdot = scalar_make(out_arr[0], out_arr[1]);
 #else
   // For real numbers, reduce a single scalar
-  MPI_Bcast(&local_tdot, 1, MPI_DOUBLE, 0, x->comm);
+  MPI_Allreduce(&local_tdot, &local_tdot, 1, MPI_DOUBLE, MPI_SUM, x->comm);
 #endif
   *val = (PetscScalar)local_tdot;
   return 0;
@@ -479,25 +471,16 @@ PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val) {
 
 PetscErrorCode VecMTDot_Seq(Vec x, PetscInt nv, const Vec y[],
                             PetscScalar val[]) {
-  $assert(x != NULL);
-  $assert(y != NULL);
-  $assert(val != NULL);
   int n = x->map->n; /* local size */
-
   for (int j = 0; j < nv; j++) {
     PetscScalar sum = scalar_zero;
     /* Compute the dot product between x and y[j] over the local elements */
     for (int i = 0; i < n; i++) {
-#ifdef USE_COMPLEX
       // For TDot (indefinite dot product), we do not apply complex conjugation
       sum = scalar_add(sum, scalar_mul(x->data[i], y[j]->data[i]));
-#else
-      sum = scalar_add(sum, x->data[i] * y[j]->data[i]);
-#endif
     }
     val[j] = sum;
   }
-  x->hdr.state++;
   return 0;
 }
 
@@ -678,7 +661,6 @@ PetscErrorCode VecCopy_Seq(Vec x, Vec y) {
   if (x != y)
     for (int i = 0; i < n; i++)
       y->data[i] = x->data[i];
-  $assert(y);
   return 0;
 }
 
@@ -686,10 +668,7 @@ PetscErrorCode VecCopy(Vec x, Vec y) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecCopy called\n");
 #endif
-  if (x == y)
-    return 0;
-  else
-    return VecCopy_Seq(x, y);
+  return VecCopy_Seq(x, y);
 }
 
 PetscErrorCode VecGetSize(Vec x, PetscInt *size) {
@@ -913,10 +892,7 @@ PetscErrorCode VecMAXPY_Seq(Vec y, PetscInt nv, const PetscScalar alpha[],
 #ifdef DEBUG
   $print("DEBUG: Spec VecMAXPY_Seq called\n");
 #endif
-  $assert(y != NULL);
-  $assert(alpha != NULL);
-  $assert(x != NULL);
-  int n = y->map->n; // local size
+  int n = y->map->n;
   for (int i = 0; i < n; i++) {
     PetscScalar sum = scalar_zero;
     for (int j = 0; j < nv; j++)
@@ -936,17 +912,13 @@ PetscErrorCode VecMAXPY(Vec y, PetscInt nv, const PetscScalar alpha[],
 }
 
 PetscErrorCode VecAXPY_Seq(Vec y, PetscScalar alpha, Vec x) {
-#ifdef DEBUG
-  $print("DEBUG: Spec VecAXPY_Seq called\n");
-#endif
-  $assert(y->read_lock_count == 0,
-          "VecAXPY: Cannot modify vector y because it is locked for reading.");
-  $assert(x->map->n == y->map->n,
-          "VecAXPY: Input vectors x and y must have the same local size.");
-  $vec c_x = petscToCivlVec(x), c_y = petscToCivlVec(y),
-       c_z = $vec_add($vec_scalar_mul(alpha, c_x), c_y);
-  civlToPetscVecCopy(c_z, y);
-  $assert(y);
+  $assert(y != NULL);
+  $assert(x != NULL);
+  $assert(y->map->n == x->map->n, "Local sizes of x and y must match.");
+  PetscInt n = x->map->n;
+  for (PetscInt i = 0; i < n; i++)
+    y->data[i] = scalar_add(y->data[i], scalar_mul(alpha, x->data[i]));
+  y->hdr.state++;
   return 0;
 }
 
@@ -985,20 +957,13 @@ PetscErrorCode VecAXPBY(Vec y, PetscScalar alpha, PetscScalar beta, Vec x) {
 
 PetscErrorCode VecAXPBYPCZ_Seq(Vec z, PetscScalar alpha, PetscScalar beta,
                                PetscScalar gamma, Vec x, Vec y) {
-#ifdef DEBUG
-  $print("DEBUG: Spec VecAXPBYPCZ_Seq called\n");
-#endif
-  $assert(z->read_lock_count == 0,
-          "Cannot VecAXPBYPCZ values: Vector is locked for reading.");
-  $assert(x->map->n == y->map->n && y->map->n == z->map->n,
-          "VecAXPBYPCZ_spec: Vectors must have the same size.");
-
-  $vec c_x = petscToCivlVec(x), c_y = petscToCivlVec(y),
-       c_z = petscToCivlVec(z),
-       c_w = $vec_add(
-           $vec_add($vec_scalar_mul(alpha, c_x), $vec_scalar_mul(beta, c_y)),
-           $vec_scalar_mul(gamma, c_z));
-  civlToPetscVecCopy(c_w, z);
+  PetscInt n = z->map->n;
+  for (PetscInt i = 0; i < n; i++) {
+    z->data[i] = scalar_add(
+        scalar_add(scalar_mul(alpha, x->data[i]), scalar_mul(beta, y->data[i])),
+        scalar_mul(gamma, z->data[i]));
+  }
+  z->hdr.state++;
   return 0;
 }
 
@@ -1054,16 +1019,12 @@ PetscErrorCode VecSwap(Vec x, Vec y) {
 }
 
 PetscErrorCode VecWAXPY_Seq(Vec w, PetscScalar alpha, Vec x, Vec y) {
-#ifdef DEBUG
-  $print("DEBUG: Spec VecWAXPY_Seq called\n");
-#endif
-  $assert(w->read_lock_count == 0,
-          "Cannot modify vector w: it is locked for reading.");
-  $assert(x->map->n == y->map->n && y->map->n == w->map->n,
-          "VecWAXPY_spec: Vectors must have the same size.");
-  $vec c_x = petscToCivlVec(x), c_y = petscToCivlVec(y),
-       c_w = $vec_add(c_y, $vec_scalar_mul(alpha, c_x));
-  civlToPetscVecCopy(c_w, w);
+  int n = x->map->n;
+  $assert(n == y->map->n, "Vectors x and y must have the same local size");
+  $assert(n == w->map->n, "Vectors w and x must have the same local size");
+  for (int i = 0; i < n; i++)
+    w->data[i] = scalar_add(y->data[i], scalar_mul(alpha, x->data[i]));
+  w->hdr.state++;
   return 0;
 }
 
@@ -1078,15 +1039,11 @@ PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y) {
 }
 
 PetscErrorCode VecAYPX_Seq(Vec y, PetscScalar beta, Vec x) {
-#ifdef DEBUG
-  $print("DEBUG: Spec VecAYPX_Seq called\n");
-#endif
-  $assert(y->read_lock_count == 0,
-          "Cannot AYPX values: Vector is locked for reading.");
-  int N = x->map->n;
-  $assert(N == y->map->n, "Vector length mismatch");
-  $vec c_x = petscToCivlVec(x), c_y = petscToCivlVec(y);
-  civlToPetscVecCopy($vec_add($vec_scalar_mul(beta, c_y), c_x), y);
+  PetscInt n = y->map->n;
+  $assert(n == x->map->n, "Local size mismatch between vectors");
+  for (PetscInt i = 0; i < n; i++)
+    y->data[i] = scalar_add(x->data[i], scalar_mul(beta, y->data[i]));
+  y->hdr.state++;
   return 0;
 }
 

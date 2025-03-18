@@ -33,7 +33,6 @@ PetscErrorCode VecMXDot_Private(
   PetscCall(VecLockReadPop(x));
   for (PetscInt i = 0; i < nv; ++i)
     PetscCall(VecLockReadPop(y[i]));
-  $print("DEBUG: target VecMTDot\n");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -9,10 +9,13 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecMax=VecMax_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
+all: runbig
+
+runbig: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
 
 runsmall: versmall
 
+# Note: add -DDEBUG to any command below to see lots of detail
 
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
@@ -25,6 +28,18 @@ ver2r: $(DEPS)
 
 ver2c: $(DEPS)
 	$(VERIFYC) -input_mpi_nprocs=2 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+ver3r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=3 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver3c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=3 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+ver4r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=4 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver4c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=4 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
 
 ver5r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=5 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
@@ -47,4 +62,4 @@ versmall: $(DEPS)
 clean:
 	rm -rf *.o *~ *.tmp *.exec CIVLREP *.dSYM
 
-.PHONY: all ver1r ver1c ver2r ver2c ver5r ver5c clean
+.PHONY: all runbig runsmall ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c debug versmall clean

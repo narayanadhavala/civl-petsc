@@ -7,7 +7,6 @@ SUBDIRS := $(shell find functions -mindepth 1 -maxdepth 1 -type d -not -name ".*
 # covering both real and complex cases.
 all:
 	@for dir in $(SUBDIRS); do \
-	  extra_inputs="$(call get_super_inputs,$$dir)"; \
 	  echo "\n\033[1;34m==============================================\033[0m"; \
 	  echo "\033[1;34m=== Verifying: $$dir\033[0m"; \
 	  echo "\033[1;34m==============================================\033[0m\n"; \
