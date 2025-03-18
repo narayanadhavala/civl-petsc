@@ -14,18 +14,6 @@ all:
 	  $(MAKE) -C functions/$$dir all; \
 	done
 
-# The "runsmall" target runs a quicker set of tests in each subfolder.
-# It runs the verification tests with vector sizes from 1 to 3 and processor counts from 1 and 2,
-# which is faster while still testing both real and complex cases.
-runsmall:
-	@for dir in $(SUBDIRS); do \
-	  extra_inputs="$(call get_super_inputs,$$dir)"; \
-	  echo "\n\033[1;34m==============================================\033[0m"; \
-	  echo "\033[1;34m=== Verifying: $$dir\033[0m"; \
-	  echo "\033[1;34m==============================================\033[0m\n"; \
-	  $(MAKE) -C functions/$$dir runsmall; \
-	done
-
 # The "clean" target goes into every subfolder and runs its clean target
 clean:
 	@for d in $(SUBDIRS); do \

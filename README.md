@@ -87,10 +87,7 @@ This makefile is designed to automatically run tests on all the function impleme
 2. **Running Full Tests**  
    When user run `make all`, the makefile goes into each of those subfolders and runs a complete set of tests. These tests check different vector sizes (from 1 to 5) and different processor counts (from 1 to 5) for both real and complex cases.
 
-3. **Running Quick Tests**  
-   If user want faster results, running `make runsmall` does a quicker set of tests. It tests with smaller vector sizes (1 to 3) and fewer processor counts (1 and 2), while still checking both real and complex cases.
-
-4. **Cleaning Up**  
+3. **Cleaning Up**  
    The `make clean` target goes into each function folder and runs its clean routine.
 
 ## Note
