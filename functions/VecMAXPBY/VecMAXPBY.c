@@ -3,6 +3,9 @@
 
 PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
                          PetscScalar beta, Vec x[]) {
+#ifdef DEBUG
+  $print("Target VecMAXPBY: alpha[0]=", alpha[0]," beta=",beta," nv =",nv,"\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(y, VEC_CLASSID, 1);
   VecCheckAssembled(y);
@@ -14,6 +17,7 @@ PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
 
   PetscValidLogicalCollectiveScalar(y, beta, 4);
   if (y->ops->maxpby) {
+    $print("y->ops->maxpby is true");
     PetscInt zeros = 0;
 
     if (nv) {
@@ -48,10 +52,11 @@ PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
       PetscCall(VecLockReadPop(x[i]));
   } else { // no maxpby
            // used the scalar_eq to compare the complex & real numbers
-    if (scalar_eq(scalar_of(0), beta))
-      PetscCall(VecSet(y, scalar_of(1)));
-    else
+    if (scalar_eq(scalar_of(0.0), beta)) {
+      PetscCall(VecSet(y, scalar_of(0.0)));
+    } else {
       PetscCall(VecScale(y, beta));
+    }
     PetscCall(VecMAXPY(y, nv, alpha, x));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

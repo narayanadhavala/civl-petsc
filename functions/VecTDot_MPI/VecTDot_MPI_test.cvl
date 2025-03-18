@@ -1,0 +1,47 @@
+#include "petscvec.h"
+#undef VecTDot_MPI
+PetscErrorCode VecTDot_MPI(Vec x, Vec y, PetscScalar *z);
+
+$input int n = 4;
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  int rank;
+  $vec c_x = $vec_zero(0), c_y = $vec_zero(0);
+  STYPE x_values[n], y_values[n], actual, expected;
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0) {
+    for (int i = 0; i < n; i++) {
+      x_values[i] = scalar_make((double)(i + 1), 0.0);
+      y_values[i] = scalar_make((double)(i + 2), 0.0);
+    }
+    c_x = $vec_make_from_dense(n, x_values);
+    c_y = $vec_make_from_dense(n, y_values);
+    $print("\nx: ");
+    $vec_print(c_x);
+    $print("\ny: ");
+    $vec_print(c_y);
+  }
+  Vec p_x = civlToPetscVec(c_x, PETSC_DECIDE, comm);
+  Vec p_y = civlToPetscVec(c_y, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecTDot_MPI(p_x, p_y, &actual);
+  VecTDot_MPI_spec(p_x, p_y, &expected);
+  $assert(err_actual == 0);
+  if (rank == 0) {
+    $print("\nExpected VecTDot_MPI product: ", expected, "\n",
+           "Actual   VecTDot_MPI product: ", actual, "\n");
+#ifdef USE_COMPLEX
+    $assert(PetscRealPart(actual) == PetscRealPart(expected),
+            "Real part mismatch");
+    $assert(PetscImaginaryPart(actual) == PetscImaginaryPart(expected),
+            "Imaginary part mismatch");
+#else
+    $assert(actual == expected, "VecTDot_MPI product mismatch");
+#endif
+  }
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  MPI_Finalize();
+  return 0;
+}

@@ -2,6 +2,9 @@
 #undef VecMin
 
 PetscErrorCode VecMin(Vec x, PetscInt *p, PetscReal *val) {
+#ifdef DEBUG
+  $print("Target VecMin\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidType(x, 1);

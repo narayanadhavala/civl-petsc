@@ -2,6 +2,9 @@
 #undef VecNorm
 
 PetscErrorCode VecNorm(Vec x, NormType type, PetscReal *val) {
+#ifdef DEBUG
+  $print("Target VecNorm: type=", type, "\n");
+#endif
   PetscBool flg = PETSC_TRUE;
 
   PetscFunctionBegin;

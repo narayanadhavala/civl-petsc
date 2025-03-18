@@ -27,7 +27,8 @@ $input CIVL_RTYPE Y_Imag[bs * niBlocks], X_Imag[N];
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
   $vec civl_x = $vec_zero(N);
@@ -42,19 +43,18 @@ int main(void) {
 
     civl_x = $vec_make_from_dense(N, x_vals);
 
-    $print("\nN = ", N, ", ni = ", niBlocks, "\n");
-    $print("Array of values y: [");
+    $print("\nNo.of procs = ", size, ", N = ", N, "\nx: ");
+    $vec_print(civl_x);
+    $print("Block data (y_vals): ");
     for (int i = 0; i < bs * niBlocks; i++) {
       scalar_print(y_vals[i]);
-      if (i < (bs * niBlocks - 1)) $print(", ");
+      (i < bs * niBlocks - 1) ? $print(", ") : $print("\n");
     }
-    $print("] at Block Indices (ix): [");
+    $print("Block indices (blockIx): ");
     for (int i = 0; i < niBlocks; i++) {
-      $print(blockIx[i]);
-      if (i < (niBlocks - 1)) $print(", ");
+      $print("blockIx[", i, "] = ", blockIx[i]);
+      (i < niBlocks - 1) ? $print(", ") : $print("\n");
     }
-    $print("]\nx: ");
-    $vec_print(civl_x);
   }
 
   Vec p_x = civlToPetscVec(civl_x, PETSC_DECIDE, comm);
@@ -65,8 +65,8 @@ int main(void) {
 
   PetscErrorCode err_actual =
       VecSetValuesBlocked(p_x, niBlocks, blockIx, y_vals, INSERT_VALUES);
-  VecSetValuesBlocked_spec(
-      expected_x, niBlocks, blockIx, y_vals, INSERT_VALUES);
+  VecSetValuesBlocked_spec(expected_x, niBlocks, blockIx, y_vals,
+                           INSERT_VALUES);
 
   $assert(err_actual == 0);
   if (rank == 0) {
@@ -77,7 +77,8 @@ int main(void) {
   vecprint_mpi("Expected", expected_x);
   PetscBool flg;
   VecEqual(p_x, expected_x, &flg);
-  $assert(flg, "VecSetValuesBlocked mismatch between actual and expected values.");
+  $assert(flg,
+          "VecSetValuesBlocked mismatch between actual and expected values.");
 
   VecDestroy(&p_x);
   VecDestroy(&expected_x);

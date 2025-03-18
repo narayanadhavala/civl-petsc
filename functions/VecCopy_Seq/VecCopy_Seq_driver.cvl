@@ -23,18 +23,18 @@ int main(void) {
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
 
     x = $vec_make_from_dense(N, value);
-    $print("\nN = ", N, " \nx: ");
+//    $print("\nN = ", N, " \nx: ");
     $vec_print(x);
     $print("y:");
     $vec_print(y);
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec actual = civlToPetscVec(y, PETSC_DECIDE, comm);
   Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = civlToPetscVec(y, PETSC_DECIDE, comm);
 
-  PetscErrorCode err_actual = VecCopy_Seq(p_x, actual);
   VecCopy_Seq_spec(p_x, expected);
+  PetscErrorCode err_actual = VecCopy_Seq(p_x, actual);
   
   $assert(err_actual == 0);
   vecprint_seq("Actual  ", actual);

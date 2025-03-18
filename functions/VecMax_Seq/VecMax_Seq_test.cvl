@@ -1,0 +1,51 @@
+#include "petscvec.h"
+#undef VecMax_Seq
+PetscErrorCode VecMax_Seq(Vec x, PetscInt *p, PetscReal *val);
+
+$input int n = 4;
+
+int main (){
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, p_actual = 0, p_expected = 0;
+  MPI_Comm_rank(comm, &rank);
+  $vec x = $vec_zero(0);
+
+  STYPE x_values[n];
+  CIVL_RTYPE actual, expected = 0.0;
+
+  if (rank == 0) {
+    for (int i = 0; i < n; i++) {
+#ifdef USE_COMPLEX
+      x_values[i] = $make_complex((double)(i + 1), 0.0);
+#else
+      x_values[i] = (double)(i + 1);
+#endif
+    }
+
+    x = $vec_make_from_dense(n, x_values);
+  
+    $print("Vector x:\n");
+    $vec_print(x);
+  }
+  /* Broadcast p_expected from rank 0 to all other ranks */
+/*   MPI_Bcast(&p_expected, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&expected, 1, MPI_DOUBLE, 0, comm); */
+
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecMax_Seq(p_x, &p_actual, &actual);
+  VecMax_Seq_spec(p_x, &p_expected, &expected);
+
+  $assert(err_actual == 0);
+  $assert(p_actual == p_expected);
+  $assert(actual == expected);
+
+  if (rank == 0){
+    $pathCondition();
+    $print("\nActual Vec Max   = ", actual, " at index ", p_actual, "\n", "Expected Vec Max = ", expected, " at index ", p_expected,"\n\n");
+  }
+
+  VecDestroy(&p_x);
+  MPI_Finalize();
+  return 0;
+}

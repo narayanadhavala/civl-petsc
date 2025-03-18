@@ -5,9 +5,8 @@ VERIFY = civl verify -checkTermination
 
 all: complex vec p2c_complex p2c_real
 
-complex: civlcomplex_test.cvl $(VEC)/civlcomplex.cvl $(INC)/civlcomplex.cvh
-	$(VERIFY) -DUSE_COMPLEX -DCIVL_COMPLEX -userIncludePath=$(INC) \
-  civlcomplex_test.cvl $(VEC)/civlcomplex.cvl
+complex: civlcomplex_test.cvl $(VEC)/civlcomplex.cvl $(INC)/civlcomplex.cvh $(INC)/scalars.cvh
+	$(VERIFY) -DUSE_COMPLEX -DCIVL_COMPLEX -userIncludePath=$(INC) civlcomplex_test.cvl $(VEC)/civlcomplex.cvl
 
 vec: civlvec_test.cvl $(VEC)/civlcomplex.cvl $(VEC)/civlvec.cvl $(INC)/civlvec.cvh
 	$(VERIFY) -DUSE_COMPLEX -DCIVL_COMPLEX -userIncludePath=$(INC) \

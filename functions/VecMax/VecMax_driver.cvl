@@ -1,51 +1,48 @@
 #include "petscvec.h"
 #include <mpi.h>
-#include <stdio.h>
 #undef VecMax
-PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val);
-
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
-
 $input CIVL_RTYPE X_Real[N];
 #ifdef USE_COMPLEX
 $input CIVL_RTYPE X_Imag[N];
 #endif
 
+PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val);
+
 int main() {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank, p_actual, p_expected;
+  int rank, nprocs, i_actual = 0, i_expected = 0;
   MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &nprocs);
   $vec x = $vec_zero(0);
-
   STYPE x_values[N];
   CIVL_RTYPE actual, expected;
-
   if (rank == 0) {
     for (int i = 0; i < N; i++)
       x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
-
     x = $vec_make_from_dense(N, x_values);
-
+    $print("VecMax: nprocs=", nprocs, ", N=", N, "\n");
+#ifdef DEBUG
     $print("Vector x:\n");
     $vec_print(x);
+#endif
   }
-
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  PetscErrorCode err_actual = VecMax(p_x, &p_actual, &actual);
-  VecMax_spec(p_x, &p_expected, &expected);
-
+  VecMax_spec(p_x, &i_expected, &expected);
+  PetscErrorCode err_actual = VecMax(p_x, &i_actual, &actual);
+#ifdef DEBUG
   if (rank == 0) {
     $print("\n");
     $pathCondition();
-    $print("\nActual Vec Max   = ", actual, " at index ", p_actual, "\n\n",
-           "Expected Vec Max = ", expected, " at index ", p_expected, "\n\n");
+    $print("\nActual Vec Max   = ", actual, " at index ", i_actual, "\n\n",
+           "Expected Vec Max = ", expected, " at index ", i_expected, "\n\n");
   }
+#endif
   $assert(err_actual == 0);
-  $assert(p_actual == p_expected);
-  $assert(actual == expected);
-
+  $assert(actual == expected, "Value mismatch");
+  $assert(i_actual == i_expected, "Index mismactch");
   VecDestroy(&p_x);
   MPI_Finalize();
 }

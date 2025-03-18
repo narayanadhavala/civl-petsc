@@ -57,8 +57,8 @@ int main(void) {
   for (int v = 0; v < NV; v++)
     p_x[v] = civlToPetscVec(x[v], PETSC_DECIDE, comm);
 
-  PetscErrorCode err_actual = VecMAXPY(p_y, NV, alpha, p_x);
   VecMAXPY_spec(expectedMAXPY, NV, alpha, p_x);
+  PetscErrorCode err_actual = VecMAXPY(p_y, NV, alpha, p_x);
 
   $assert(err_actual == 0);
   if(rank == 0) {

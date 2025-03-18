@@ -4,6 +4,9 @@
 PetscErrorCode VecAXPBYPCZAsync_Private(Vec z, PetscScalar alpha,
                                         PetscScalar beta, PetscScalar gamma,
                                         Vec x, Vec y, PetscDeviceContext dctx) {
+#ifdef DEBUG
+  $print("Target VecAXPBYPCZAsync_Private: alpha=", alpha," beta=",beta," gamma=",gamma,"\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(z, VEC_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 5);
@@ -27,7 +30,7 @@ PetscErrorCode VecAXPBYPCZAsync_Private(Vec z, PetscScalar alpha,
   PetscValidLogicalCollectiveScalar(z, gamma, 4);
   // used the scalar_eq to compare the complex & real numbers
   if (scalar_eq(scalar_of(0), alpha) && scalar_eq(scalar_of(0), beta) &&
-      scalar_eq(scalar_of(0), gamma)) {
+      scalar_eq(scalar_of(1), gamma)) {
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
@@ -48,6 +51,9 @@ PetscErrorCode VecAXPBYPCZAsync_Private(Vec z, PetscScalar alpha,
 
 PetscErrorCode VecAXPBYPCZ(Vec z, PetscScalar alpha, PetscScalar beta,
                            PetscScalar gamma, Vec x, Vec y) {
+#ifdef DEBUG
+  $print("Target VecAXPBYPCZ: alpha=", alpha," beta=",beta,"gamma=",gamma,"\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecAXPBYPCZAsync_Private(z, alpha, beta, gamma, x, y, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);

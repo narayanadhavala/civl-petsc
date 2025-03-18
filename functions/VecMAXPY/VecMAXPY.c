@@ -4,6 +4,9 @@
 PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
                                      const PetscScalar alpha[], Vec x[],
                                      PetscDeviceContext dctx) {
+#ifdef DEBUG
+  $print("Target VecMAXPYAsync_Private: alpha[0]=", alpha[0]," nv =",nv,"\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(y, VEC_CLASSID, 1);
   VecCheckAssembled(y);
@@ -51,6 +54,9 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
 
 PetscErrorCode VecMAXPY(Vec y, PetscInt nv, const PetscScalar alpha[],
                         Vec x[]) {
+#ifdef DEBUG
+  $print("Target VecMAXPY: alpha[0]=", alpha[0]," nv =",nv,"\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecMAXPYAsync_Private(y, nv, alpha, x, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);

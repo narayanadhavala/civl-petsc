@@ -40,6 +40,9 @@ $vec $vec_set($vec vec, int i, STYPE x);
 /* Returns the concatenation of vec1, vec2. */
 $vec $vec_concat($vec vec1, $vec vec2);
 
+/* Returns the copy of input vector. */
+$vec $vec_copy($vec vec1, $vec vec2);
+
 /* Returns the vector obtained by extracting the subsequence of
    elements of vec starting at position first, with length n. */
 $vec $vec_subseq($vec vec, int first, int n);
@@ -54,6 +57,9 @@ STYPE $vec_dot($vec vec1, $vec vec2);
 
 /* Adds two vectors component-wise */
 $vec $vec_add($vec vec1, $vec vec2);
+
+/* Subtracts two vectors component-wise */
+$vec $vec_sub($vec vec1, $vec vec2);
 
 /* Scalar times a vector */
 $vec $vec_scalar_mul(STYPE a, $vec vec);

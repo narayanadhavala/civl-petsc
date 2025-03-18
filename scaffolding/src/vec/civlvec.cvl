@@ -1,4 +1,5 @@
 #include "civlvec.cvh"
+#include <seq.cvh>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,7 +7,10 @@
 $vec $vec_make_from_dense(int len, STYPE* vals) {
   $vec result;
   result.len = len;
-  result.data = (STYPE[len])$lambda(int i) vals[i];
+  if (len == 0)
+    $seq_init(&result.data, 0, NULL);
+  else
+    result.data = (STYPE[len])$lambda(int i) vals[i];
   return result;
 }
 
@@ -14,7 +18,10 @@ $vec $vec_zero(int len) {
   $vec result;
   result.len = len;
   STYPE zero = scalar_zero;
-  result.data = (STYPE[len])$lambda(int i) zero;
+  if (len == 0)
+    $seq_init(&result.data, 0, NULL);
+  else
+    result.data = (STYPE[len])$lambda(int i) zero;
   return result;
 }
 
@@ -60,9 +67,15 @@ $vec $vec_concat($vec vec1, $vec vec2) {
   return result;
 }
 
+$vec $vec_copy($vec vec1, $vec vec2) {
+  $assert(vec1.len == vec2.len, "Vector length mismatch");
+  int N = vec1.len;
+  for (int i = 0; i < N; i++)
+    vec2.data[i] = vec1.data[i];
+  return vec2;
+}
+
 $vec $vec_subseq($vec vec, int first, int n) {
-  $print("first = ", first, " n = ", n," vec length = ", vec.len,"\n");
-  $vec_print(vec);
   $assert(first >= 0 && first + n <= vec.len, "Invalid subsequence range");
   $vec result;
   result.len = n;
@@ -114,6 +127,16 @@ $vec $vec_add($vec vec1, $vec vec2) {
   result.len = n;
   for (int i = 0; i < n; i++)
     result.data[i] = scalar_add(vec1.data[i], vec2.data[i]);
+  return result;
+}
+
+$vec $vec_sub($vec vec1, $vec vec2) {
+  int n = vec1.len;
+  $assert(n == vec2.len, "Invalid vector length");
+  $vec result;
+  result.len = n;
+  for (int i = 0; i < n; i++)
+    result.data[i] = scalar_sub(vec1.data[i], vec2.data[i]);
   return result;
 }
 

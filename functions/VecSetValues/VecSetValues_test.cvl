@@ -18,7 +18,8 @@ CIVL_RTYPE X_Real[N] = {0.0, 0.0, 0.0, 0.0, 0.0};
 int main() {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
   // Initialize vectors x and y as zero vectors
@@ -34,10 +35,6 @@ int main() {
     for (int i = 0; i < ni; i++)
       y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
 
-    // Broadcast x_values and y_values from process 0 to all processes
-    // MPI_Bcast(x_values, N * sizeof(PetscScalar), MPI_BYTE, 0, comm);
-    // MPI_Bcast(y_values, ni * sizeof(PetscScalar), MPI_BYTE, 0, comm);
-
     // All processes create vector x from x_values
     x = $vec_make_from_dense(N, x_values);
 
@@ -45,24 +42,20 @@ int main() {
     for (int i = 0; i < ni; i++)
       y = $vec_set(y, ix[i], y_values[i]);
 
-    $print("Initial Vector x:\n");
+    $print("\nNo.of procs = ", size, ", N = ", N, ", x: ");
     $vec_print(x);
-    $print("\nExpected Vector y after VecSetValues:\n");
-    $vec_print(y);
     $print("Values to insert (y):");
     for (int i = 0; i < ni; i++)
       $print(y_values[i], " ");
     $print(" at Indices (ix):");
     for (int i = 0; i < ni; i++)
       $print("ix[", i, "] = ", ix[i], " ");
-    $print("\n");
+    $print("\nExpected y: ");
+    $vec_print(y);
   }
-  $print("Before converting x\n");
   // Convert CIVL vectors to PETSc vectors
   Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-  $print("Before converting y\n");
   Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
-  $print("Before converting x & y\n");
 
   // Apply VecSetValues to the actual vector
   PetscErrorCode err_actual =
@@ -80,8 +73,8 @@ int main() {
   }
 
   // Print the actual and expected vectors for verification
-  vecprint_mpi("\nActual   VecSetValues", actual);
-  vecprint_mpi("\nExpected VecSetValues", expected);
+  vecprint_mpi("Actual  ", actual);
+  vecprint_mpi("Expected", expected);
 
   // Destroy the PETSc vectors to free memory
   VecDestroy(&actual);

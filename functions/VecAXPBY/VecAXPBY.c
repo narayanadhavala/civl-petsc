@@ -4,6 +4,9 @@
 /*modified only to use the CIVL's scalar_add and PetscScalar_is_zero*/
 PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
                                      Vec x, PetscDeviceContext dctx) {
+#ifdef DEBUG
+  $print("Target VecAXPBYAsync_Private: alpha=", alpha," beta=",beta,"\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 4);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 1);
@@ -16,7 +19,7 @@ PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
   PetscValidLogicalCollectiveScalar(y, alpha, 2);
   PetscValidLogicalCollectiveScalar(y, beta, 3);
   //used the scalar_eq to compare the complex & real numbers
-  if (scalar_eq(scalar_of(0), alpha) && scalar_eq(scalar_of(1), beta))
+  if (scalar_eq(scalar_of(0.0), alpha) && scalar_eq(scalar_of(1.0), beta))
     PetscFunctionReturn(PETSC_SUCCESS);
   if (x == y) {
     // used the scalar_add to add two complex numbers
@@ -37,6 +40,9 @@ PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
 }
 
 PetscErrorCode VecAXPBY(Vec y, PetscScalar alpha, PetscScalar beta, Vec x) {
+#ifdef DEBUG
+  $print("Target VecAXPBY: alpha=", alpha," beta=",beta,"\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecAXPBYAsync_Private(y, alpha, beta, x, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);

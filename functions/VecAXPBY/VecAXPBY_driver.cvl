@@ -7,11 +7,9 @@ PetscErrorCode VecAXPBY(Vec y, PetscScalar alpha, PetscScalar beta, Vec x);
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
 
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE X_Real[N], X_Imag[N], Y_Real[N], Y_Imag[N], alpha_Real,
-    alpha_Imag, beta_Real, beta_Imag;
-#else
 $input CIVL_RTYPE X_Real[N], Y_Real[N], alpha_Real, beta_Real;
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N], alpha_Imag, beta_Imag;
 #endif
 
 int main(void) {
@@ -20,57 +18,41 @@ int main(void) {
   int rank;
   MPI_Comm_rank(comm, &rank);
   // Vectors x and y
-  $vec x = $vec_zero(N);
-  $vec y = $vec_zero(N);
-  $vec z = $vec_zero(N);
+  $vec x = $vec_zero(N), y = $vec_zero(N);
 
   STYPE x_values[N], y_values[N], alpha, beta;
 
-#ifdef USE_COMPLEX
-  alpha = $make_complex(alpha_Real, alpha_Imag);
-  beta = $make_complex(beta_Real, beta_Imag);
-#else
-  alpha = alpha_Real;
-  beta = beta_Real;
-#endif
+  alpha = scalar_make(alpha_Real, alpha_Imag);
+  beta = scalar_make(beta_Real, beta_Imag);
 
   if (rank == 0) {
     for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
-      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
-#else
-      x_values[i] = X_Real[i];
-      y_values[i] = Y_Real[i];
-#endif
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
     }
 
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
-    z = $vec_make_from_dense(N, y_values);
 
-    $print("CIVL:");
-    $print("Vector x:\n");
+    $print("\nN = ", N,"\nx: ");
     $vec_print(x);
-    $print("Vector y:\n");
+    $print("\ny: ");
     $vec_print(y);
-    $print("Vector z:\n");
-    $vec_print(z);
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec expectedAXPBY = civlToPetscVec(z, PETSC_DECIDE, comm);
-  PetscErrorCode err_expected = VecAXPBY_spec(expectedAXPBY, alpha, beta, p_x);
+  Vec expectedAXPBY = civlToPetscVec(y, PETSC_DECIDE, comm);
+  VecAXPBY_spec(expectedAXPBY, alpha, beta, p_x);
   PetscErrorCode err_actual = VecAXPBY(p_y, alpha, beta, p_x);
   
   if (rank == 0) {
     $print("\n");
     $pathCondition();
   }
-  vecprint_mpi("\nActual   AXPBY", p_y);
-  vecprint_mpi("\nExpected AXPBY", expectedAXPBY);
-  $assert(err_actual == err_expected);
+  vecprint_mpi("Actual   AXPBY", p_y);
+  vecprint_mpi("Expected AXPBY", expectedAXPBY);
+  $assert(err_actual == 0);
   bool flg;
   VecEqual(p_y, expectedAXPBY, &flg);
   $assert(flg == $true,
@@ -81,5 +63,4 @@ int main(void) {
   VecDestroy(&expectedAXPBY);
 
   MPI_Finalize();
-  return 0;
 }

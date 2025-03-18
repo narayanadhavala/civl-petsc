@@ -30,7 +30,8 @@ $complex $conj($complex x) {
 
 CIVL_RTYPE $cabs($complex x) {
   CIVL_RTYPE sum = x.real * x.real + x.imag * x.imag;
-  return sum == 0.0 ? 0.0 : sqrt(sum);
+  //return ((sum == 0.0) ? 0.0 : sqrt(sum));
+  return sqrt(sum);
 }
 
 void $cprint($complex x) {

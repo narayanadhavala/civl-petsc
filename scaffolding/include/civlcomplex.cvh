@@ -16,10 +16,14 @@ typedef struct $complex {
 } $complex;
 
 /* The complex number x+y*i */
-#define $make_complex(x,y) ($complex){x,y}
+#define $make_complex(x, y) ($complex) { x, y }
+
+// #define $cadd(x, y) _Generic((y), $complex: $cadd_complex, int: $cadd_int)(x, y)
+// #define $cadd($complex x, $complex y);
+// $complex $cadd_int($complex x, int y);
 
 /* The complex number 0+0i */
-#define $czero  (($complex){ 0.0, 0.0 })
+#define $czero (($complex){0.0, 0.0})
 
 $complex $cadd($complex x, $complex y);
 
@@ -40,7 +44,7 @@ CIVL_RTYPE $cabs($complex x);
 #define $cimag(x) (x).imag
 
 /* Are the two complex numbers equal? */
-#define $ceq(x,y) ((x).real==(y).real && (x).imag==(y).imag)
+#define $ceq(x, y) ((x).real == (y).real && (x).imag == (y).imag)
 
 /* Prints the complex number */
 void $cprint($complex x);

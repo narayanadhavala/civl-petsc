@@ -1,17 +1,18 @@
+/* CIVL driver for VecNormalize.  Assumes the 2-norm of a vector is
+   positive, then divides every component of that vector by the
+   2-norm. */
 #include <mpi.h>
 #include <petscvec.h>
-#include <stdio.h>
 #undef VecNormalize
-PetscErrorCode VecNormalize(Vec x, PetscReal *val);
-
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
-
 $input CIVL_RTYPE A_Real[N];
 #ifdef USE_COMPLEX
 $input CIVL_RTYPE A_Imag[N];
 #else
 #endif
+
+PetscErrorCode VecNormalize(Vec x, PetscReal *val);
 
 int main(void) {
   MPI_Init(NULL, NULL);
@@ -23,26 +24,25 @@ int main(void) {
     STYPE value[N];
     for (int i = 0; i < N; i++)
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
-
     x = $vec_make_from_dense(N, value);
+    $assume($vec_norm(x, 2) > 0.0);
     $print("\nN = ", N, "\nx: ");
     $vec_print(x);
   }
-
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_expected = civlToPetscVec(x, PETSC_DECIDE, comm);
-
   CIVL_RTYPE expected = 0.0, actual = 0.0;
-  PetscErrorCode err_actual = VecNormalize(p_x, &actual);
   VecNormalize_spec(p_expected, &expected);
+  PetscErrorCode err_actual = VecNormalize(p_x, &actual);
   $assert(err_actual == 0);
-    if (rank == 0) {
+#ifdef DEBUG
+  if (rank == 0) {
     $print("\n");
     $pathCondition();
     $print("\nActual   = ", actual, "\n", "Expected = ", expected, "\n");
   }
+#endif
   $assert(actual == expected);
-
   VecDestroy(&p_x);
   VecDestroy(&p_expected);
   MPI_Finalize();

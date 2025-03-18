@@ -24,7 +24,6 @@ int main(void) {
     for (int i = 0; i < N; i++) {
       x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
       y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
-      expected = scalar_make(0.0, 0.0);
     }
 
     x = $vec_make_from_dense(N, x_values);

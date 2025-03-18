@@ -43,12 +43,11 @@ int main(void) {
     y = $vec_make_from_dense(N, y_values);
     z = $vec_make_from_dense(N, z_values);
 
-    $print("CIVL:");
-    $print("Vector x:\n");
+    $print("\nN = ", N,"\nx: ");
     $vec_print(x);
-    $print("Vector y:\n");
+    $print("\ny: ");
     $vec_print(y);
-    $print("Vector z:\n");
+    $print("\nz: ");
     $vec_print(z);
   }
 
@@ -57,11 +56,14 @@ int main(void) {
   Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
   Vec expected = civlToPetscVec(z, PETSC_DECIDE, comm);
 
-  PetscErrorCode err_actual = VecAXPBYPCZ(p_z, alpha, beta, gamma, p_x, p_y);
   VecAXPBYPCZ_spec(expected, alpha, beta, gamma, p_x, p_y);
+  PetscErrorCode err_actual = VecAXPBYPCZ(p_z, alpha, beta, gamma, p_x, p_y);
   $assert(err_actual == 0);
 
-  if (rank == 0) $pathCondition();
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+  }
   vecprint_mpi("Actual  ", p_z);
   vecprint_mpi("Expected", expected);
   bool flg;

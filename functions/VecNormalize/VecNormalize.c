@@ -3,7 +3,7 @@
 
 PetscErrorCode VecNormalize(Vec x, PetscReal *val) {
   PetscReal norm;
-
+  
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidType(x, 1);

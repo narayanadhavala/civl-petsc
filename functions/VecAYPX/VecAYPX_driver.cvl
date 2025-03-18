@@ -41,8 +41,8 @@ int main(void) {
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
   Vec expectedAYPX = civlToPetscVec(y, PETSC_DECIDE, comm);
-  PetscErrorCode err_actual = VecAYPX(p_y, beta, p_x);
   VecAYPX_spec(expectedAYPX, beta, p_x);
+  PetscErrorCode err_actual = VecAYPX(p_y, beta, p_x);
   $assert(err_actual == 0);
   if (rank == 0) {
     $print("\n");

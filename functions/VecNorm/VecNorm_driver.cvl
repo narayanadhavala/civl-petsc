@@ -1,86 +1,64 @@
-#include <math.h>
+/* CIVL driver for verification of function VecNorm. */
 #include <mpi.h>
 #include <petscvec.h>
-#include <stdio.h>
 #undef VecNorm
-PetscErrorCode VecNorm(Vec xin, NormType type, PetscReal *z);
-
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
-
-#ifdef USE_COMPLEX
-$input CIVL_RTYPE A_Real[N], A_Imag[N];
-#else
 $input CIVL_RTYPE A_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE A_Imag[N];
 #endif
 
-void printNormType(NormType type) {
-  switch (type) {
-  case NORM_1:
-    printf("NORM_1: ");
-    break;
-  case NORM_2:
-    printf("NORM_2: ");
-    break;
-  case NORM_FROBENIUS:
-    printf("NORM_FROBENIUS: ");
-    break;
-  case NORM_INFINITY:
-    printf("NORM_INFINITY: ");
-    break;
-  case NORM_1_AND_2:
-    printf("NORM_1_AND_2: ");
-    break;
-  default:
-    printf("Unknown: ");
-  }
-}
+PetscErrorCode VecNorm(Vec xin, NormType type, PetscReal *z);
 
 int main(void) {
-  MPI_Init(NULL, NULL);
-  MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+  CIVL_RTYPE expected[2] = {0.0, 0.0}, actual[2] = {0.0, 0.0};
+  int rank, size, normType;
   $vec x = $vec_zero(0);
-  int normType;
+  MPI_Init(NULL, NULL);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (rank == 0) {
+    $elaborate(N);
+    normType = $choose_int(5);
+    $print("VecNorm_driver: nprocs=", size, ", N=", N, ", normType=",
+	   $petsc_norm_name(normType), "...\n");
     STYPE value[N];
     for (int i = 0; i < N; i++)
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
-
     x = $vec_make_from_dense(N, value);
-    $print("\nN = ", N, "\nx: ");
+#ifdef DEBUG
+    $print("x = ");
     $vec_print(x);
-    normType = $choose_int(5);
+    $print("\n");
+#endif
+    // Caclculate expected result.   Another way to do this would be
+    // VecNorm_spec(p_x, normType, expected);.  However this would
+    // cache the result in p_x, so would need to clear that before
+    // calling actual VecNorm.
+    $petsc_norm(x, normType, expected);
   }
-
-  MPI_Bcast(&normType, 1, MPI_INT, 0, comm);
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  CIVL_RTYPE expected[2] = {0.0, 0.0}, actual[2];
-
+  MPI_Bcast(&normType, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&expected, 2, MPIU_REAL, 0, MPI_COMM_WORLD);
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
   PetscErrorCode err_actual = VecNorm(p_x, normType, actual);
-  VecNorm_spec(p_x, normType, expected);
-
   $assert(err_actual == 0);
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-    $print("\n");
-
-    // Assert and print actual & expected calculated norm values
-    printNormType(normType);
-    $print("Actual   = ", actual[0], "\n");
-    printNormType(normType);
-    $print("Expected = ", expected[0], "\n");
-    $assert(actual[0] == expected[0]);
-    if (normType == NORM_1_AND_2){
-      printNormType(normType);
-      $print("Actual   = ", actual[1], "\n");
-      printNormType(normType);
-      $print("Expected = ", expected[1], "\n");
-      $assert(actual[1] == expected[1]);
-    }
+#ifdef DEBUG
+  if (rank == 0) $print("\n"); $pathCondition(); $print("\n");
+  $print("Rank ", rank, ": Actual   = ", actual[0], "\n",
+	 "Expected = ", expected[0], "\n");
+#endif
+  $assert(actual[0] == expected[0]);
+  if (normType == NORM_1_AND_2) {
+#ifdef DEBUG
+    $print("Rank ", rank, ": Actual   = ", actual[1], "\n",
+	   "Expected = ", expected[1], "\n");
+#endif
+    $assert(actual[1] == expected[1]);
   }
+#ifdef DEBUG
+  $print("ok\n");
+#endif
   VecDestroy(&p_x);
   MPI_Finalize();
 }

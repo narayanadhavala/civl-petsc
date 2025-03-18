@@ -1,0 +1,61 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+#undef VecMin_Seq
+PetscErrorCode VecMin_Seq(Vec x, PetscInt *p, PetscReal *val);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+$input CIVL_RTYPE X_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N];
+#else
+#endif
+
+int main() {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, nprocs, p_actual, p_expected;
+  MPI_Comm_size(comm, &nprocs);
+  MPI_Comm_rank(comm, &rank);
+  $vec x = $vec_zero(0);
+
+  STYPE x_values[N];
+  CIVL_RTYPE actual, expected;
+
+  if (rank == 0) {
+    for (int i = 0; i < N; i++)
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+
+    x = $vec_make_from_dense(N, x_values);
+
+    $print("\nNo.of procs = ", nprocs,", N = ", N, "\nx: ");
+    $vec_print(x);
+  }
+
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+
+  if (N == 0)
+    $assume(p_x->map->N == 0 || (p_expected >= 0));
+  else
+    $assume(p_x->map->N != 0 || (p_expected == -1 && actual == PETSC_MAX_REAL));
+
+  PetscErrorCode err_actual = VecMin_Seq(p_x, &p_actual, &actual);
+  VecMin_Seq_spec(p_x, &p_expected, &expected);
+
+  $assert(err_actual == 0);
+
+  if (rank == 0){
+    $print("\n");
+    $pathCondition();
+    $print("\nActual Vec Min   = ", actual, " at index ", p_actual, "\n\n",
+           "Expected Vec Min = ", expected, " at index ", p_expected, "\n\n");
+  }
+  $assert(p_actual == p_expected);
+  $assert(actual == expected);
+
+  VecDestroy(&p_x);
+  MPI_Finalize();
+  return 0;
+}

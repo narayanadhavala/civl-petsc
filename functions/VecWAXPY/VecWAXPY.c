@@ -3,6 +3,9 @@
 
 PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
                                      PetscDeviceContext dctx) {
+#ifdef DEBUG
+  $print("Target VecWAXPYAsync_Private: alpha=", alpha, "\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
@@ -44,6 +47,9 @@ PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
 }
 
 PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y) {
+#ifdef DEBUG
+  $print("Target VecWAXPY: alpha=", alpha, "\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecWAXPYAsync_Private(w, alpha, x, y, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);

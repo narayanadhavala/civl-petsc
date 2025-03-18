@@ -1,0 +1,117 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <pointer.cvh>
+#include <stdio.h>
+#undef VecMTDot_MPI
+
+PetscErrorCode VecMTDot_MPI(Vec x, PetscInt nv, const Vec y[], PetscScalar val[]);
+
+/* Function to compute the reference indefinite dot product */
+STYPE indefiniteDot($vec a, $vec b) {
+  $assert(a.len == b.len, "Vectors must match in length for indefiniteDot()");
+#ifdef CIVL_COMPLEX
+  STYPE dot_result = $make_complex(0.0, 0.0);
+  for (int i = 0; i < a.len; i++)
+    dot_result = $cadd(dot_result, $cmul(a.data[i], b.data[i]));
+#else
+  STYPE dot_result = 0.0;
+  for (int i = 0; i < a.len; i++)
+    dot_result += a.data[i] * b.data[i];
+#endif
+  return dot_result;
+}
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX); /* The size of vector x */
+
+$input int nv; /* number of y[] vectors */
+$assume(0 <= nv && nv <= N);
+
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Real[N], X_Imag[N];
+$input CIVL_RTYPE Y_Real[nv * N], Y_Imag[nv * N];
+#else
+$input CIVL_RTYPE X_Real[N];
+$input CIVL_RTYPE Y_Real[nv * N];
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+
+  /* Initialize vector x */
+  STYPE x_vals[N];
+  for (int i = 0; i < N; i++) {
+#ifdef USE_COMPLEX
+    x_vals[i] = $make_complex(X_Real[i], X_Imag[i]);
+#else
+    x_vals[i] = X_Real[i];
+#endif
+  }
+  $vec civl_x = $vec_make_from_dense(N, x_vals);
+
+  /* Prepare an array of CIVL vectors y[] of length nv */
+  $vec civl_y[nv];
+  for (int i = 0; i < nv; i++) {
+    STYPE tmpArr[N];
+    for (int j = 0; j < N; j++) {
+#ifdef USE_COMPLEX
+      /* The j-th element of y[i] is Y_Real[i*N + j], Y_Imag[i*N + j] */
+      tmpArr[j] = $make_complex(Y_Real[i * N + j], Y_Imag[i * N + j]);
+#else
+      tmpArr[j] = Y_Real[i * N + j];
+#endif
+    }
+    civl_y[i] = $vec_make_from_dense(N, tmpArr);
+  }
+
+  /* Print input vectors on rank 0 */
+  if (rank == 0) {
+    $print("Input vector x:\n");
+    $vec_print(civl_x);
+
+    for (int i = 0; i < nv; i++) {
+      $print("\nInput vector y[", i, "]:\n");
+      $vec_print(civl_y[i]);
+    }
+  }
+
+  /* Convert CIVL vectors to PETSc Vecs for testing */
+  STYPE val_ref[nv], val_actual[nv];
+  Vec px = civlToPetscVec(civl_x, PETSC_DECIDE, comm);
+  Vec py[nv];
+  for (int i = 0; i < nv; i++)
+    py[i] = civlToPetscVec(civl_y[i], PETSC_DECIDE, comm);
+
+  /* Compute dot products using VecMTDot_MPI */
+  PetscErrorCode err = VecMTDot_MPI(px, nv, py, val_actual);
+  $assert(err == 0, "VecMTDot_MPI() returned a non-zero error code.");
+
+  /* Compute reference dot products */
+  for (int i = 0; i < nv; i++)
+    val_ref[i] = indefiniteDot(civl_x, civl_y[i]);
+
+  /* Compare val_actual[] with val_ref[] */
+  for (int i = 0; i < nv; i++) {
+#ifdef USE_COMPLEX
+    $assert($ceq(val_actual[i], val_ref[i]),
+            "Mismatch at dot product %d: Expected ", i, val_ref[i],
+            " Got ", val_actual[i]);
+#else
+    $assert(val_actual[i] == val_ref[i],
+            "Mismatch at dot product %d: Expected %g, Got %g", i,
+            val_ref[i], val_actual[i]);
+#endif
+  }
+
+  if (rank == 0)
+    $pathCondition();
+
+  for (int i = 0; i < nv; i++)
+    VecDestroy(&py[i]);
+  VecDestroy(&px);
+
+  MPI_Finalize();
+}

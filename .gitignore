@@ -1,0 +1,20 @@
+# Ignore the CIVLREP directory
+CIVLREP/
+
+# Ignore all .tmp files
+*.tmp
+
+# Ignore all .o files
+*.o
+
+# Ignore backup files (those ending in ~)
+*~
+
+# Ignore .exec files
+*.exec
+
+# Ignore .log files
+*.log
+
+# Ignore .sh files
+*.sh

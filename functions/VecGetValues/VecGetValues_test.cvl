@@ -1,7 +1,5 @@
 #include "petscvec.h"
-#include <mpi.h>
 #include <pointer.cvh>
-#include <stdio.h>
 #undef VecGetValues
 
 /* Prototype for VecGetValues */
@@ -44,6 +42,7 @@ int main() {
   if (rank == chosen_proc) {
     STYPE retrieved_values[ni], expected_values[ni];
     int elements_owned = ((p_x->map->rend) - (p_x->map->rstart));
+    $print("\n[Process ", chosen_proc, "] N = ", N, ", ni = ", ni, "\n");
     for (int j = 0; j < ni; j++)
       ix[j] = p_x->map->rstart + $choose_int(elements_owned);
     /* Retrieve values from the vector at specified indices */

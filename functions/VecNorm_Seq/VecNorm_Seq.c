@@ -2,6 +2,9 @@
 #undef VecNorm_Seq
 
 PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecNorm_Seq\n");
+#endif
   // use a local variable to ensure compiler doesn't think z aliases any of the
   // other arrays
   PetscReal ztmp[] = {0.0, 0.0};
@@ -30,7 +33,7 @@ PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z) {
       for (PetscInt i = 0; i < n; ++i) {
         const PetscReal tmp = PetscAbsScalar(xx[i]);
 
-        /* check special case of tmp == NaN */
+        // check special case of tmp == NaN
         if ((tmp > ztmp[0]) || (tmp != tmp)) {
           ztmp[0] = tmp;
           if (tmp != tmp)
@@ -47,8 +50,8 @@ PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z) {
         PetscCallBLAS("BLASasum", ztmp[0] = BLASasum_(&bn, xx, &one));
       }
       PetscCall(PetscLogFlops(n - 1.0));
-      /* slight reshuffle so we can skip getting the array again (but still log
-         the flops) if we do norm2 after this */
+      // slight reshuffle so we can skip getting the array again (but still log
+      // the flops) if we do norm2 after this
       if (type == NORM_1_AND_2)
         goto NORM_1_AND_2_DOING_NORM_2;
     }
@@ -57,7 +60,5 @@ PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z) {
   z[0] = ztmp[0];
   if (type == NORM_1_AND_2)
     z[1] = ztmp[1];
-/*   else
-    z[1] = 0.0; */
   PetscFunctionReturn(PETSC_SUCCESS);
 }

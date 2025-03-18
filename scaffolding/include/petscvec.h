@@ -1,6 +1,7 @@
 #ifndef _PETSCVEC_H
 #define _PETSCVEC_H
 #include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <mpi.h>
 #include <stdarg.h>
@@ -8,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #define CIVL_RTYPE double
 #include "civlcomplex.cvh"
 #ifdef USE_COMPLEX
@@ -35,7 +37,7 @@ typedef PetscReal PetscScalar;
 #define PetscConj(a) scalar_conj(a)
 #define PetscImaginaryPart(a) ((PetscReal)(0))
 #define PetscRealPart(a) (a)
-#define PetscAbsScalar(a) fabs(a)
+#define PetscAbsScalar(a) scalar_abs(a)
 #endif
 
 // PETSc's Boolean values
@@ -120,25 +122,6 @@ typedef struct _p_PetscObject *PetscObject;
 struct _n_PetscObjectList;
 typedef struct _n_PetscObjectList *PetscObjectList;
 
-/* IS - Abstract PETSc object used for efficient indexing into vector and
- * matrices */
-typedef struct _p_IS *IS;
-
-struct _p_IS {
-  PETSCHEADER(struct _ISOps);
-  // SimpleMap map;
-  PetscInt max, min; /* range of possible values */
-  void *data;
-  PetscInt *total, *nonlocal; /* local representation of ALL indices across the
-                                 comm as well as the nonlocal part. */
-  PetscInt
-      local_offset; /* offset to the local part within the total index set */
-  IS complement;    /* IS wrapping nonlocal indices. */
-  PetscBool info_permanent[2][IS_INFO_MAX]; /* whether local / global properties
-                                               are permanent */
-  ISInfoBool info[2][IS_INFO_MAX];          /* local / global properties */
-};
-
 // Definition of struct _n_PetscObjectList
 struct _n_PetscObjectList {
   char name[256];
@@ -168,6 +151,25 @@ typedef struct map_s {
   PetscInt bs;           // for now assuming the block size as 1
   PetscInt nproc;
 } *SimpleMap;
+
+typedef struct _p_IS *IS;
+/* IS - Abstract PETSc object used for efficient indexing into vector and
+ * matrices */
+struct _p_IS {
+  PETSCHEADER(struct _ISOps);
+  SimpleMap map;
+  PetscInt max, min; /* range of possible values */
+  void *data;
+  PetscInt *total, *nonlocal; /* local representation of ALL indices across the
+                                 comm as well as the nonlocal part. */
+  PetscInt
+      local_offset; /* offset to the local part within the total index set */
+  IS complement;    /* IS wrapping nonlocal indices. */
+  PetscBool info_permanent[2][IS_INFO_MAX]; /* whether local / global properties
+                                               are permanent */
+  ISInfoBool info[2][IS_INFO_MAX];          /* local / global properties */
+  MPI_Comm comm;
+};
 
 // Now we can define Vec_s using PETSCHEADER
 typedef struct Vec_s {
@@ -285,6 +287,7 @@ struct _p_PetscDeviceContext {
 
 // PETSC_MAX_REAL represents the maximum real number value
 #define PETSC_MAX_REAL 1.7976931348623157e+308
+// #define PETSC_MAX_REAL 1'000'000
 
 // PETSC_MIN_REAL represents the minimum real number value
 #define PETSC_MIN_REAL (-PETSC_MAX_REAL)
@@ -571,6 +574,10 @@ bool $is_greaterthan(PetscScalar alpha, double n);
 #define PETSC_USE_REAL___FP16 0
 #endif
 
+#ifdef PETSC_USE_MIXED_PRECISION
+#undef PETSC_USE_MIXED_PRECISION
+#endif
+
 // PetscDefined_Internal checks if a macro is defined internally
 #define PetscDefined_Internal(x) (x)
 
@@ -592,14 +599,19 @@ PetscBool PetscIsNanReal(PetscReal a);
 // PetscCallBLAS calls a BLAS function
 #define PetscCallBLAS(x, X) X
 
+#define PetscCallMPI(x) (x)
+
 #define MPIU_Allreduce(a, b, c, d, e, fcomm)                                   \
+  MPI_Allreduce((a), (b), (c), (d), (e), (fcomm))
+
+/* #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
   do {                                                                         \
     int ierr = MPI_Allreduce((a), (b), (c), (d), (e), (fcomm));                \
     if (ierr != MPI_SUCCESS) {                                                 \
       fprintf(stderr, "Error in MPI_Allreduce: %d\n", ierr);                   \
       return ierr;                                                             \
     }                                                                          \
-  } while (0)
+  } while (0) */
 
 // PetscArraycpy copies elements from one array (str1) to another (str2)
 #define PetscArraycpy(str1, str2, cnt)                                         \
@@ -673,8 +685,6 @@ PetscBool PetscIsNanReal(PetscReal a);
 
 #define MPIU_REAL MPI_DOUBLE
 
-#define MPIU_MAX MPI_MAX
-
 #define PetscValidLogicalCollectiveScalar(a, b, arg)                           \
   do {                                                                         \
     PetscScalar b0 = (b);                                                      \
@@ -712,6 +722,150 @@ PetscBool PetscIsNanReal(PetscReal a);
       return 0;                                                                \
     free(a);                                                                   \
     (a) = NULL;                                                                \
+  } while (0)
+
+#define VecNorm_SeqFn(a, b, c) VecNorm_Seq(a, b, c)
+
+static int VecMax_Seq_GT(PetscReal l, PetscReal r) { return (l > r) ? 1 : 0; }
+
+static int VecMin_Seq_LT(PetscReal l, PetscReal r) { return (l < r) ? 1 : 0; }
+
+#ifndef MPI_IN_PLACE
+#define MPI_IN_PLACE (void *)-1
+#endif
+
+#define MPIU_SUM MPI_SUM
+
+#define MPIU_SCALAR MPIU_REAL
+
+#define PetscMax(a, b) (((a) < (b)) ? (b) : (a))
+
+#define PetscDesignatedInitializer(name, ...) .name = __VA_ARGS__
+
+#ifdef USE_VEC_MTDOT
+#define VecXDot_SeqFn(a, b, c) VecXDot_Seq_Private(a, b, c, BLASdotu_)
+#endif
+
+#define BLASfn(a, b, c, d, e) BLASdot_(a, b, c, d, e)
+
+#ifdef USE_VEC_TDOT
+/*
+  pay close attention!!! a and b are SWAPPED here so that the eventual
+  BLAS call is dot(&bn, xa, &one, ya, &one)
+*/
+#define VecXDot_SeqFn(a, b, c) VecXDot_Seq_Private(b, a, c, BLASdotu_)
+#undef BLASfn
+#define BLASfn(a, b, c, d, e) BLASdotu_(a, b, c, d, e)
+#endif
+
+#define PETSC_HAVE_MPIUNI 0
+
+#ifdef PETSC_USE_FORTRAN_KERNEL_AYPX
+#undef PETSC_USE_FORTRAN_KERNEL_AYPX
+#endif
+
+#ifdef PETSC_USE_FORTRAN_KERNEL_WAXPY
+#undef PETSC_USE_FORTRAN_KERNEL_WAXPY
+#endif
+
+#ifdef PETSC_HAVE_PRAGMA_DISJOINT
+#undef PETSC_HAVE_PRAGMA_DISJOINT
+#endif
+
+#ifndef PETSC_RESTRICT
+#define PETSC_RESTRICT restrict
+#endif
+
+#define MPIU_REAL_INT MPI_DOUBLE_INT
+#define MPIU_MAXLOC MPI_MAXLOC
+#define MPIU_MINLOC MPI_MINLOC
+#define MPIU_MAX MPI_MAX
+#define MPIU_MIN MPI_MIN
+
+#ifndef PETSC_MAX_INT
+#define PETSC_MAX_INT INT_MAX
+#endif
+
+#define PetscArrayzero(arr, cnt)                                               \
+  do {                                                                         \
+    size_t _i;                                                                 \
+    for (_i = 0; _i < (cnt); _i++) {                                           \
+      (arr)[_i] = scalar_zero;                                                 \
+    }                                                                          \
+  } while (0)
+
+#define PetscKernelAXPY(U, a1, p1, n)                                          \
+  do {                                                                         \
+    const PetscInt _n = n;                                                     \
+    const PetscScalar _a1 = a1;                                                \
+    const PetscScalar *PETSC_RESTRICT _p1 = p1;                                \
+    PetscScalar *PETSC_RESTRICT _U = U;                                        \
+    PetscInt __i;                                                              \
+    for (__i = 0; __i < _n - 1; __i += 2) {                                    \
+      PetscScalar __s1 = scalar_mul(_a1, _p1[__i]);                            \
+      PetscScalar __s2 = scalar_mul(_a1, _p1[__i + 1]);                        \
+      __s1 = scalar_add(__s1, _U[__i]);                                        \
+      __s2 = scalar_add(__s2, _U[__i + 1]);                                    \
+      _U[__i] = __s1;                                                          \
+      _U[__i + 1] = __s2;                                                      \
+    }                                                                          \
+    if (_n & 0x1)                                                              \
+      _U[__i] = scalar_add(_U[__i], scalar_mul(_a1, _p1[__i]));                \
+  } while (0)
+
+#define PetscKernelAXPY2(U, a1, a2, p1, p2, n)                                 \
+  do {                                                                         \
+    const PetscInt _n = n;                                                     \
+    const PetscScalar _a1 = a1;                                                \
+    const PetscScalar _a2 = a2;                                                \
+    const PetscScalar *PETSC_RESTRICT _p1 = p1;                                \
+    const PetscScalar *PETSC_RESTRICT _p2 = p2;                                \
+    PetscScalar *PETSC_RESTRICT _U = U;                                        \
+    for (PetscInt __i = 0; __i < _n; __i++) {                                  \
+      PetscScalar __s =                                                        \
+          scalar_add(scalar_mul(_a1, _p1[__i]), scalar_mul(_a2, _p2[__i]));    \
+      _U[__i] = scalar_add(_U[__i], __s);                                      \
+    }                                                                          \
+  } while (0)
+
+#define PetscKernelAXPY3(U, a1, a2, a3, p1, p2, p3, n)                         \
+  do {                                                                         \
+    const PetscInt _n = n;                                                     \
+    const PetscScalar _a1 = a1;                                                \
+    const PetscScalar _a2 = a2;                                                \
+    const PetscScalar _a3 = a3;                                                \
+    const PetscScalar *PETSC_RESTRICT _p1 = p1;                                \
+    const PetscScalar *PETSC_RESTRICT _p2 = p2;                                \
+    const PetscScalar *PETSC_RESTRICT _p3 = p3;                                \
+    PetscScalar *PETSC_RESTRICT _U = U;                                        \
+    for (PetscInt __i = 0; __i < _n; __i++) {                                  \
+      PetscScalar __s = scalar_add(                                            \
+          scalar_add(scalar_mul(_a1, _p1[__i]), scalar_mul(_a2, _p2[__i])),    \
+          scalar_mul(_a3, _p3[__i]));                                          \
+      _U[__i] = scalar_add(_U[__i], __s);                                      \
+    }                                                                          \
+  } while (0)
+
+#define PetscKernelAXPY4(U, a1, a2, a3, a4, p1, p2, p3, p4, n)                 \
+  do {                                                                         \
+    const PetscInt _n = n;                                                     \
+    const PetscScalar _a1 = a1;                                                \
+    const PetscScalar _a2 = a2;                                                \
+    const PetscScalar _a3 = a3;                                                \
+    const PetscScalar _a4 = a4;                                                \
+    const PetscScalar *PETSC_RESTRICT _p1 = p1;                                \
+    const PetscScalar *PETSC_RESTRICT _p2 = p2;                                \
+    const PetscScalar *PETSC_RESTRICT _p3 = p3;                                \
+    const PetscScalar *PETSC_RESTRICT _p4 = p4;                                \
+    PetscScalar *PETSC_RESTRICT _U = U;                                        \
+    for (PetscInt __i = 0; __i < _n; __i++) {                                  \
+      PetscScalar __s =                                                        \
+          scalar_add(scalar_add(scalar_add(scalar_mul(_a1, _p1[__i]),          \
+                                           scalar_mul(_a2, _p2[__i])),         \
+                                scalar_mul(_a3, _p3[__i])),                    \
+                     scalar_mul(_a4, _p4[__i]));                               \
+      _U[__i] = scalar_add(_U[__i], __s);                                      \
+    }                                                                          \
   } while (0)
 
 PetscBool PetscIsNanScalar(PetscScalar v);
@@ -1009,6 +1163,10 @@ PetscErrorCode PetscLogFlops(PetscLogDouble n);
  */
 PetscErrorCode VecSwap(Vec x, Vec y);
 
+PetscErrorCode VecDot_Seq(Vec xin, Vec yin, PetscScalar *z);
+
+PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscScalar *z);
+
 /*
   Computes the dot product of two vectors.
   Parameters:
@@ -1025,6 +1183,10 @@ PetscErrorCode VecDot(Vec x, Vec y, PetscScalar *val);
 PetscErrorCode VecDotRealPart(Vec x, Vec y, PetscReal *val);
 
 PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val);
+
+PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscScalar *z);
+
+PetscErrorCode VecTDot_Seq(Vec x, Vec y, PetscScalar *val);
 
 PetscErrorCode VecMXDot_Private(
     Vec x, PetscInt nv, const Vec y[], PetscScalar result[],
@@ -1054,6 +1216,12 @@ PetscErrorCode VecMXDot_Private(
   PETSc implementation, you would gather partial sums from each rank.
 */
 PetscErrorCode VecMTDot(Vec x, PetscInt nv, const Vec y[], PetscScalar val[]);
+
+PetscErrorCode VecMTDot_MPI(Vec xin, PetscInt nv, const Vec y[],
+                            PetscScalar *z);
+
+PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec y[],
+                            PetscScalar *z);
 
 /*
   Computes multiple vector dot products.
@@ -1103,6 +1271,10 @@ PetscErrorCode VecGetLocalSize(Vec x, PetscInt *size);
  */
 PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val);
 
+PetscErrorCode VecMax_MPI(Vec xin, PetscInt *idx, PetscReal *z);
+
+PetscErrorCode VecMax_Seq(Vec xin, PetscInt *idx, PetscReal *z);
+
 /*
   Determines the vector component with minimum real part and its location.
   Parameters:
@@ -1116,6 +1288,10 @@ PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val);
  */
 PetscErrorCode VecMin(Vec x, PetscInt *p, PetscReal *val);
 
+PetscErrorCode VecMin_MPI(Vec xin, PetscInt *idx, PetscReal *z);
+
+PetscErrorCode VecMin_Seq(Vec xin, PetscInt *idx, PetscReal *z);
+
 typedef struct _p_PetscDeviceContext *PetscDeviceContext;
 
 PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
@@ -1123,6 +1299,8 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
 
 PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha,
                                    PetscDeviceContext dctx);
+
+PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha);
 
 /*
   Scales a vector by multiplying each element by a scalar.
@@ -1136,6 +1314,8 @@ PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha,
  */
 PetscErrorCode VecScale(Vec x, PetscScalar alpha);
 
+PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha);
+
 /*
   Compares two vectors for equality.
   Parameters:
@@ -1146,8 +1326,9 @@ PetscErrorCode VecScale(Vec x, PetscScalar alpha);
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
-  Note: This function checks if the vectors have the same dimensions and block
-  size, and if their elements are equal. Supports both real and complex vectors.
+  Note: This function checks if the vectors have the same dimensions and
+  block size, and if their elements are equal. Supports both real and
+  complex vectors.
  */
 PetscErrorCode VecEqual(Vec vec1, Vec vec2, PetscBool *flg);
 
@@ -1170,6 +1351,9 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
  */
 PetscErrorCode VecMAXPY(Vec y, PetscInt nv, const PetscScalar alpha[], Vec x[]);
 
+PetscErrorCode VecMAXPY_Seq(Vec xin, PetscInt nv, const PetscScalar *alpha,
+                            Vec *y);
+
 PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
                          PetscScalar beta, Vec x[]);
 
@@ -1189,17 +1373,56 @@ PetscErrorCode VecAXPYAsync_Private(Vec y, PetscScalar alpha, Vec x,
  */
 PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x);
 
+PetscErrorCode VecAXPY_Seq(Vec yin, PetscScalar alpha, Vec xin);
+
 PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
                                      Vec x, PetscDeviceContext dctx);
 
+/*
+  Computes the linear combination of two vectors `x` and `y`:
+      y = alpha * x + beta * y
+  It iterates through the vectors with specified strides `sx` and `sy`
+  respectively. Parameters:
+  - alpha Scalar multiplier for the first vector `x`.
+  - x Pointer to the first vector.
+  - beta Scalar multiplier for the second vector `y`.
+  - y Pointer to the second vector.
+
+  Returns: This function updates the vector `y` in place.
+
+  Note: This function performs element-wise operations and assumes that the
+  vectors are of the same length.
+*/
 PetscErrorCode VecAXPBY(Vec y, PetscScalar alpha, PetscScalar beta, Vec x);
+
+PetscErrorCode VecAXPBY_Seq(Vec yin, PetscScalar a, PetscScalar b, Vec xin);
 
 PetscErrorCode VecAXPBYPCZAsync_Private(Vec z, PetscScalar alpha,
                                         PetscScalar beta, PetscScalar gamma,
                                         Vec x, Vec y, PetscDeviceContext dctx);
 
+/*
+  Computes the linear combination of three vectors `x`, `y`, and `z`:
+      w = alpha * x + beta * y + gamma * z
+  It iterates through the vectors with specified strides `sx`, `sy`, and `sz`
+  respectively. Parameters:
+  - alpha Scalar multiplier for the first vector `x`.
+  - x Pointer to the first vector.
+  - beta Scalar multiplier for the second vector `y`.
+  - y Pointer to the second vector.
+  - gamma Scalar multiplier for the third vector `z`.
+  - z Pointer to the third vector.
+
+  Returns: This function updates the vector `z` in place.
+
+  Note: This function performs element-wise operations and assumes that the
+  vectors are of the same length.
+*/
 PetscErrorCode VecAXPBYPCZ(Vec z, PetscScalar alpha, PetscScalar beta,
                            PetscScalar gamma, Vec x, Vec y);
+
+PetscErrorCode VecAXPBYPCZ_Seq(Vec zin, PetscScalar alpha, PetscScalar beta,
+                               PetscScalar gamma, Vec xin, Vec yin);
 
 PetscErrorCode VecAYPXAsync_Private(Vec y, PetscScalar beta, Vec x,
                                     PetscDeviceContext dctx);
@@ -1216,6 +1439,8 @@ PetscErrorCode VecAYPXAsync_Private(Vec y, PetscScalar beta, Vec x,
   Note: Supports both real and complex scalars and vectors.
  */
 PetscErrorCode VecAYPX(Vec y, PetscScalar beta, Vec x);
+
+PetscErrorCode VecAYPX_Seq(Vec yin, PetscScalar alpha, Vec xin);
 
 PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
                                      PetscDeviceContext dctx);
@@ -1234,22 +1459,27 @@ PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
  */
 PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y);
 
+PetscErrorCode VecWAXPY_Seq(Vec win, PetscScalar alpha, Vec xin, Vec yin);
 /*
-  Computes the component-wise multiplication w[i] = x[i] * y[i]. This operation
-  is performed for each element `i` of the vectors `x`, `y`. Parameters:
+  Computes the component-wise multiplication w[i] = x[i] * y[i]. This
+  operation is performed for each element `i` of the vectors `x`, `y`.
+  Parameters:
   - w Vector to store the result.
   - x First input vector.
   - y Second input vector.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
-  Note: Supports both real and complex numbers, where complex multiplication is
-  performed element-wise.
+  Note: Supports both real and complex numbers, where complex multiplication
+  is performed element-wise.
  */
 PetscErrorCode VecPointwiseMult(Vec w, Vec x, Vec y);
+
+PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max);
 /*
-  Computes the maximum of the componentwise division max = max_i abs(x[i]/y[i]).
-  This operation is performed for each element `i` of the vectors `x`, `y`.
+  Computes the maximum of the componentwise division max = max_i
+  abs(x[i]/y[i]). This operation is performed for each element `i` of the
+  vectors `x`, `y`.
 
   Parameters:
   - x: Vector containing the numerators.
@@ -1260,8 +1490,8 @@ PetscErrorCode VecPointwiseMult(Vec w, Vec x, Vec y);
 
   Note:
   - If `y[i]` is zero, it is treated as 1 for the computation.
-  - Supports both real and complex numbers, where the magnitude of the division
-  result is considered for complex numbers.
+  - Supports both real and complex numbers, where the magnitude of the
+  division result is considered for complex numbers.
  */
 PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max);
 
@@ -1315,6 +1545,18 @@ PetscErrorCode VecCopyAsync_Private(Vec x, Vec y, PetscDeviceContext dctx);
  */
 PetscErrorCode VecCopy(Vec xin, Vec yin);
 
+PetscErrorCode VecCopy_Seq(Vec xin, Vec yin);
+
+/* Utility function to compute the PETSc norm of a CIVL vector */
+void $petsc_norm($vec vec, NormType type, PetscReal *result);
+
+/* Returns string representation of the PETSc norm type */
+char *$petsc_norm_name(NormType type);
+
+PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z);
+
+PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscReal *z);
+
 PetscErrorCode VecNorm(Vec x, NormType type, PetscReal *val);
 
 PetscErrorCode VecNormAvailable(Vec x, NormType type, PetscBool *available,
@@ -1337,17 +1579,6 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val);
 PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z);
 
 /*
-  Copies one sequential vector `xin` to another sequential vector `yin` of the
-  same size. It ensures that the destination vector `yin` has the same elements
-  as the source vector `xin`. Parameters:
-  - xin Source vector.
-  - yin Destination vector.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
- */
-PetscErrorCode VecCopy_Seq(Vec xin, Vec yin);
-
-/*
   Gets a read-only pointer to the vector's data array.
   Parameters:
   - x Input vector.
@@ -1356,6 +1587,8 @@ PetscErrorCode VecCopy_Seq(Vec xin, Vec yin);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
  */
 PetscErrorCode VecGetArrayRead(Vec x, const PetscScalar **a);
+
+PetscErrorCode VecGetArrayWrite(Vec x, PetscScalar **a);
 
 /*
   Gets a writable pointer to the vector's data array.
@@ -1376,6 +1609,8 @@ PetscErrorCode VecGetArray(Vec x, PetscScalar **a);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
  */
 PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar **a);
+
+PetscErrorCode VecRestoreArrayWrite(Vec x, PetscScalar **a);
 
 /*
   Restores the array obtained from VecGetArray.
@@ -1419,6 +1654,12 @@ PetscErrorCode VecSetValue(Vec v, PetscInt i, PetscScalar va, InsertMode mode);
 PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             const PetscScalar y[], InsertMode iora);
 
+PetscErrorCode VecSetValues_MPI(Vec xin, PetscInt ni, const PetscInt ix[],
+                                const PetscScalar y[], InsertMode addv);
+
+PetscErrorCode VecSetValues_Seq(Vec x, PetscInt ni, const PetscInt ix[],
+                                const PetscScalar y[], InsertMode iora);
+
 /*
   Inserts or adds blocks of values into a PETSc vector at specified indices.
 
@@ -1433,10 +1674,10 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
   - PetscErrorCode: 0 on success, non-zero on failure.
 
   Notes:
-  - Each block is a contiguous group of elements of size equal to the vector's
-  block size.
-  - The function updates the vector such that x[bs * ix[i] + j] = y[bs * i + j],
-    for j = 0, ..., bs-1, where bs is the block size of the vector.
+  - Each block is a contiguous group of elements of size equal to the
+  vector's block size.
+  - The function updates the vector such that x[bs * ix[i] + j] = y[bs * i +
+  j], for j = 0, ..., bs-1, where bs is the block size of the vector.
   - Indices outside the range owned by the local process are ignored.
   - Calls with INSERT_VALUES and ADD_VALUES cannot be mixed without
     intervening calls to VecAssemblyBegin() and VecAssemblyEnd().
@@ -1444,12 +1685,18 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
   conditions.
 
   Usage:
-  This operation is particularly useful in parallel computations when dealing
-  with structured data such as blocks of matrix rows or other grouped data
-  structures.
+  This operation is particularly useful in parallel computations when
+  dealing with structured data such as blocks of matrix rows or other
+  grouped data structures.
  */
 PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[],
                                    const PetscScalar y[], InsertMode iora);
+
+PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt ix[],
+                                   const PetscScalar y[], InsertMode iora);
+
+PetscErrorCode VecSetValuesBlocked_Seq(Vec x, PetscInt ni, const PetscInt ix[],
+                                       const PetscScalar y[], InsertMode iora);
 /*
   ISCreateGeneral - Creates an index set from an array of integers.
 
@@ -1468,9 +1715,53 @@ PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[],
 PetscErrorCode ISCreateGeneral(MPI_Comm comm, PetscInt n, const PetscInt idx[],
                                PetscCopyMode mode, IS *is);
 
+PetscErrorCode ISGetSize(IS is, PetscInt *size);
+/*
+  Creates a data structure for an index set containing a list of evenly
+  spaced integers.
+
+  Parameters:
+  - comm: the MPI communicator.
+  - n: the length of the locally owned portion of the index set.
+  - first: the first element of the locally owned portion of the index set.
+  - step: the change to the next index.
+  - is: the new index set.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+*/
 PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
                               PetscInt step, IS *is);
 
+/*
+  Returns the local (processor) length of an index set.
+
+  Parameters:
+  - is: The index set.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Output:
+  - size: The local size.
+  */
+PetscErrorCode ISGetLocalSize(IS is, PetscInt *size);
+
+/*
+  Creates a new vector that is a vertical concatenation of all the given array
+  of vectors in the order they appear in the array. The concatenated vector
+  resides on the same communicator and is the same type as the source vectors.
+
+  Parameters:
+  - nx: Number of vectors to be concatenated.
+  - X: Array containing the vectors to be concatenated in the order of
+  concatenation.
+
+  Output Parameters:
+  - Y: Concatenated vector.
+  - x_is: Array of index sets corresponding to the concatenated components of Y
+  (pass NULL if not needed).
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+ */
 PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]);
 
 /*
@@ -1492,16 +1783,22 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]);
  */
 PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             PetscScalar y[]);
+
+PetscErrorCode VecGetValues_MPI(Vec xin, PetscInt ni, const PetscInt ix[],
+                                PetscScalar y[]);
+
+PetscErrorCode VecGetValues_Seq(Vec xin, PetscInt ni, const PetscInt ix[],
+                                PetscScalar y[]);
 /*
-  Conjugates each element of the vector.
-  Parameters:
-  - xin Vector to be conjugated.
+Conjugates each element of the vector.
+Parameters:
+- xin Vector to be conjugated.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+Returns: PetscErrorCode (0 on success, non-zero on failure).
 
-  Note: Handles both complex and real vectors depending on the USE_COMPLEX
-  macro.
- */
+Note: Handles both complex and real vectors depending on the USE_COMPLEX
+macro.
+*/
 PetscErrorCode VecConjugate_Seq(Vec xin);
 
 /*
@@ -1556,25 +1853,6 @@ PetscReal BLASnrm2_(const PetscBLASInt *n, const PetscScalar *x,
                     const PetscBLASInt *stride);
 
 /*
-  Computes the dot product of two vectors `x` and `y`:
-      result = sum(x[i] * y[i])
-  It iterates through the vectors with specified strides `sx` and `sy`
-  respectively. Parameters:
-  - n Pointer to the number of elements in the vectors.
-  - x Pointer to the first vector.
-  - sx Pointer to the stride between elements in the first vector.
-  - y Pointer to the second vector.
-  - sy Pointer to the stride between elements in the second vector.
-
-  Returns: PetscScalar The computed dot product.
-
-  Note: For complex numbers, it computes: sum(x[ix] * conj(y[iy]))
- */
-PetscScalar BLASdot_(const PetscBLASInt *n, const PetscScalar *x,
-                     const PetscBLASInt *sx, const PetscScalar *y,
-                     const PetscBLASInt *sy);
-
-/*
   Computes the sum of absolute values of elements in a vector `dx`:
       result = sum(|dx[i]|)
   It iterates through the vector elements with a specified stride `incx` and
@@ -1590,6 +1868,39 @@ PetscScalar BLASdot_(const PetscBLASInt *n, const PetscScalar *x,
 PetscReal BLASasum_(const PetscBLASInt *n, const PetscScalar *dx,
                     const PetscBLASInt *incx);
 
+/*
+  Scales a vector `x` by a scalar `alpha`:
+      x[i] = alpha * x[i]
+  It iterates through the vector with a specified stride `sx`.
+  Parameters:
+  - n Pointer to the number of elements in the vector.
+  - alpha Pointer to the scalar value to scale the vector.
+  - x Pointer to the vector to be scaled.
+  - sx Pointer to the stride between elements in the vector.
+
+  Returns: void
+
+  Note: This function modifies the input vector `x` in place.
+*/
+PetscErrorCode BLASscal_(const PetscBLASInt *n, const PetscScalar *alpha,
+                         PetscScalar *x, const PetscBLASInt *incx);
+
+/*
+Computes the operation y := alpha * x + y, where `x` and `y` are vectors and
+`alpha` is a scalar. It iterates through the vectors with specified strides `sx`
+and `sy` respectively.
+
+Parameters:
+- n Pointer to the number of elements in the vectors.
+- alpha Pointer to the scalar multiplier for the vector `x`.
+- x Pointer to the first vector.
+- sx Pointer to the stride between elements in the first vector.
+- y Pointer to the second vector.
+- sy Pointer to the stride between elements in the second vector.
+*/
+PetscErrorCode BLASaxpy_(const PetscBLASInt *n, const PetscScalar *alpha,
+                         const PetscScalar *x, const PetscBLASInt *incx,
+                         PetscScalar *y, const PetscBLASInt *incy);
 /*
   Copies n bytes from location b to location a.
   Parameters:
@@ -1694,44 +2005,130 @@ bool vec_eq_seq(Vec vec1, Vec vec2);
  */
 void vec_destroy_seq(Vec vec);
 
+/*Blas routines*/
+/*
+  Computes the dot product of two vectors `x` and `y`:
+      result = sum(PetscConj(x[i]) * y[i])
+  It iterates through the vectors with specified strides `sx` and `sy`
+  respectively.
+
+  Parameters:
+  - n Pointer to the number of elements in the vectors.
+  - x Pointer to the first vector.
+  - sx Pointer to the stride between elements in the first vector.
+  - y Pointer to the second vector.
+  - sy Pointer to the stride between elements in the second vector.
+
+  Returns: PetscScalar The computed dot product.
+
+  Note: For complex numbers, it computes: sum(PetscConj(x[ix]) * y[iy])
+*/
+PetscScalar BLASdot_(const PetscBLASInt *n, const PetscScalar *x,
+                     const PetscBLASInt *sx, const PetscScalar *y,
+                     const PetscBLASInt *sy);
+
 // Now that Vec is forward-declared, we can define VecOps
 typedef struct _VecOps *VecOps;
 
 struct _VecOps {
-  PetscErrorCode (*norm)(Vec, NormType, PetscReal *); /* z = sqrt(x^H * x) */
+  PetscErrorCode (*norm)(Vec, NormType, PetscReal *); // z = sqrt(x^H * x)
   PetscErrorCode (*maxpointwisedivide)(Vec, Vec,
-                                       PetscReal *); /* m = max abs(x ./ y) */
-  PetscErrorCode (*dot)(Vec, Vec, PetscScalar *);    /* z =  */
+                                       PetscReal *); // m = max abs(x ./ y)
+  PetscErrorCode (*dot)(Vec, Vec, PetscScalar *);    // z =
   PetscErrorCode (*max)(Vec, PetscInt *,
-                        PetscReal *); /* z = max(x); idx=index of max(x) */
+                        PetscReal *); // z = max(x); idx=index of max(x)
   PetscErrorCode (*min)(Vec, PetscInt *,
-                        PetscReal *); /* z = min(x); idx=index of min(x) */
-  PetscErrorCode (*tdot)(Vec, Vec, PetscScalar *); /* x'*y */
-  PetscErrorCode (*scale)(Vec, PetscScalar);       /* x = alpha * x   */
-  PetscErrorCode (*set)(Vec, PetscScalar);         /* y = alpha  */
-  PetscErrorCode (*axpy)(Vec, PetscScalar, Vec);   /* y = y + alpha * x */
-  PetscErrorCode (*aypx)(Vec, PetscScalar, Vec);   /* y = x + alpha * y */
+                        PetscReal *); // z = min(x); idx=index of min(x)
+  PetscErrorCode (*tdot)(Vec, Vec, PetscScalar *); // x'*y
+  PetscErrorCode (*scale)(Vec, PetscScalar);       // x = alpha * x
+  PetscErrorCode (*set)(Vec, PetscScalar);         // y = alpha
+  PetscErrorCode (*axpy)(Vec, PetscScalar, Vec);   // y = y + alpha * x
+  PetscErrorCode (*aypx)(Vec, PetscScalar, Vec);   // y = x + alpha * y
   PetscErrorCode (*axpby)(Vec, PetscScalar, PetscScalar,
-                          Vec); /* y = alpha * x + beta * y*/
+                          Vec); // y = alpha * x + beta * y
   PetscErrorCode (*axpbypcz)(Vec, PetscScalar, PetscScalar, PetscScalar, Vec,
-                             Vec); /* z = alpha * x + beta *y + gamma *z*/
-  PetscErrorCode (*waxpy)(Vec, PetscScalar, Vec, Vec); /* w = y + alpha * x */
-  PetscErrorCode (*copy)(Vec, Vec);                    /* y = x */
+                             Vec); // z = alpha * x + beta *y + gamma *z
+  PetscErrorCode (*waxpy)(Vec, PetscScalar, Vec, Vec); // w = y + alpha * x
+  PetscErrorCode (*copy)(Vec, Vec);                    // y = x
   PetscErrorCode (*setvalues)(Vec, PetscInt, const PetscInt[],
                               const PetscScalar[], InsertMode);
   PetscErrorCode (*getvalues)(Vec, PetscInt, const PetscInt[], PetscScalar[]);
   PetscErrorCode (*setvaluesblocked)(Vec, PetscInt, const PetscInt[],
                                      const PetscScalar[], InsertMode);
   PetscErrorCode (*mtdot)(Vec, PetscInt, const Vec[],
-                          PetscScalar *); /* z[j] = x dot y[j] */
+                          PetscScalar *); // z[j] = x dot y[j]
   PetscErrorCode (*maxpy)(Vec, PetscInt, const PetscScalar *,
-                          Vec *); /* y = y + alpha[j] x[j] */
+                          Vec *); // y = y + alpha[j] x[j]
   PetscErrorCode (*maxpby)(Vec, PetscInt, const PetscScalar *, PetscScalar,
-                           Vec *);  /* y = beta y + alpha[j] x[j] */
-  PetscErrorCode (*copy)(Vec, Vec); /* y = x */
+                           Vec *); // y = beta y + alpha[j] x[j]
   PetscErrorCode (*concatenate)(PetscInt, const Vec[], Vec *, IS *[]);
   PetscErrorCode (*getsubvector)(Vec, IS, Vec *);
+  PetscErrorCode (*restorearray)(Vec, PetscScalar **); /* restore data array */
+  PetscErrorCode (*restorearraywrite)(Vec, PetscScalar **);
+  PetscErrorCode (*getarraywrite)(Vec, PetscScalar **);
 };
+
+// Helper that assigns MPI-version function pointers
+static inline void SetOps_MPI(Vec vec) {
+  vec->ops->norm = VecNorm_MPI;
+  vec->ops->maxpointwisedivide = VecMaxPointwiseDivide_Seq;
+  vec->ops->dot = VecDot_MPI;
+  vec->ops->max = VecMax_MPI;
+  vec->ops->min = VecMin_MPI;
+  vec->ops->tdot = VecTDot_MPI;
+  vec->ops->scale = VecScale_Seq;
+  vec->ops->restorearraywrite = VecRestoreArrayWrite;
+  vec->ops->getarraywrite = VecGetArrayWrite;
+  vec->ops->set = VecSet_Seq;
+  vec->ops->axpy = VecAXPY_Seq;
+  vec->ops->aypx = VecAYPX_Seq;
+  vec->ops->axpby = VecAXPBY_Seq;
+  vec->ops->axpbypcz = VecAXPBYPCZ_Seq;
+  vec->ops->waxpy = VecWAXPY_Seq;
+  vec->ops->copy = VecCopy_Seq;
+  vec->ops->mtdot = VecMTDot_MPI;
+  vec->ops->maxpy = VecMAXPY_Seq;
+  vec->ops->maxpby = NULL;
+
+  vec->ops->concatenate = NULL;
+  // vec->ops->getsubvector = NULL;
+  vec->ops->setvalues = VecSetValues_MPI;
+  vec->ops->setvaluesblocked = VecSetValuesBlocked_MPI;
+  vec->ops->getvalues = VecGetValues_MPI;
+}
+
+// Helper that assigns sequential-version function pointers
+static inline void SetOps_Seq(Vec vec) {
+  vec->ops->norm = VecNorm_Seq;
+  vec->ops->maxpointwisedivide = VecMaxPointwiseDivide_Seq;
+  vec->ops->dot = VecDot_Seq;
+  vec->ops->max = VecMax_Seq;
+  vec->ops->min = VecMin_Seq;
+  vec->ops->tdot = VecTDot_Seq;
+  vec->ops->scale = VecScale_Seq;
+  vec->ops->restorearraywrite = VecRestoreArrayWrite;
+  vec->ops->getarraywrite = VecGetArrayWrite;
+  vec->ops->set = VecSet_Seq;
+  vec->ops->axpy = VecAXPY_Seq;
+  vec->ops->aypx = VecAYPX_Seq;
+  vec->ops->axpby = VecAXPBY_Seq;
+  vec->ops->axpbypcz = VecAXPBYPCZ_Seq;
+  vec->ops->waxpy = VecWAXPY_Seq;
+  vec->ops->copy = VecCopy_Seq;
+  vec->ops->mtdot = VecMTDot_Seq;
+  vec->ops->maxpy = VecMAXPY_Seq;
+  vec->ops->maxpby = NULL;
+
+  vec->ops->concatenate = NULL;
+  // vec->ops->getsubvector = NULL;
+  vec->ops->setvalues = VecSetValues_Seq;
+  vec->ops->setvaluesblocked = VecSetValuesBlocked_Seq;
+  vec->ops->getvalues = VecGetValues_Seq;
+}
+
+// static struct _VecOps DvOps = {PetscDesignatedInitializer(norm,
+// VecNorm_MPI)};
+typedef struct _ISOps *_ISOps;
 
 struct _ISOps {
   PetscErrorCode (*duplicate)(IS, IS *);
@@ -1757,7 +2154,7 @@ struct _ISOps {
   PetscErrorCode (*permlocal)(IS, PetscBool *);
   PetscErrorCode (*permglobal)(IS, PetscBool *);
   PetscErrorCode (*intervallocal)(IS, PetscBool *);
-  PetscErrorCode (*intervalglobal)(IS, PetscBool *); */
+  PetscErrorCode (*intervalglobal)(IS, PetscBool *);*/
 };
 
 #endif

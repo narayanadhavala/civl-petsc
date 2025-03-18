@@ -7,6 +7,9 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
   PetscBool flgs[4];
   PetscReal one = 1.0;
 
+#ifdef DEBUG
+  $print("Target VecScaleAsync_Private: alpha=", alpha, "\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidType(x, 1);
@@ -40,6 +43,9 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
 }
 
 PetscErrorCode VecScale(Vec x, PetscScalar alpha) {
+#ifdef DEBUG
+  $print("Target VecScale: alpha=", alpha, "\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecScaleAsync_Private(x, alpha, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);

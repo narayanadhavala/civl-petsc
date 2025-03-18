@@ -1,0 +1,60 @@
+/* CIVL verification driver for function VecDot_MPI */
+#include "petscvec.h"
+#include <mpi.h>
+#include <pointer.cvh>
+#undef VecDot_MPI
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE X_Real[N], Y_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N];
+#endif
+
+PetscErrorCode VecDot_MPI(Vec x, Vec y, PetscScalar *val);
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, nprocs;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &nprocs);
+  $vec x = $vec_zero(0), y = x;
+  if (rank == 0) {
+    PetscScalar x_values[N], y_values[N];
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
+    }
+    $print("VecDot_MPI_driver: nprocs=", nprocs, ", N=", N, "\n");
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+#ifdef DEBUG
+    $print("VecDot_MPI: x = ");
+    $vec_print(x);
+    $print("\nVecDot_MPI: y = ");
+    $vec_print(y);
+    $print("\n");
+#endif
+  }
+  PetscScalar actual, expected;
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm),
+    p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  VecDot_MPI_spec(p_x, p_y, &expected);
+  PetscErrorCode err = VecDot_MPI(p_x, p_y, &actual);
+  $assert(err == 0);
+#ifdef DEBUG
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+    $print("\nActual   : ");
+    scalar_print(actual);
+    $print("\nExpected : ");
+    scalar_print(expected);
+    $print("\n\n");
+  }
+#endif
+  $assert($equals(&actual, &expected));
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  MPI_Finalize();
+}

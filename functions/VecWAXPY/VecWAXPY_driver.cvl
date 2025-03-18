@@ -39,25 +39,25 @@ int main(void) {
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec p_w = civlToPetscVec(z, PETSC_DECIDE, comm);
   Vec expectedWAXPY = civlToPetscVec(z, PETSC_DECIDE, comm);
-  PetscErrorCode err_actual = VecWAXPY(p_z, alpha, p_x, p_y);
   VecWAXPY_spec(expectedWAXPY, alpha, p_x, p_y);
+  PetscErrorCode err_actual = VecWAXPY(p_w, alpha, p_x, p_y);
   
   $assert(err_actual == 0);
   if (rank == 0) {
     $print("\n");
     $pathCondition();
   }
-  vecprint_mpi("Actual  ", p_z);
+  vecprint_mpi("Actual  ", p_w);
   vecprint_mpi("Expected", expectedWAXPY);
   bool flg;
-  VecEqual(p_z, expectedWAXPY, &flg);
+  VecEqual(p_w, expectedWAXPY, &flg);
   $assert(flg, "VecWAXPY mismatch between actual and expected results.");
 
   VecDestroy(&p_x);
   VecDestroy(&p_y);
-  VecDestroy(&p_z);
+  VecDestroy(&p_w);
   VecDestroy(&expectedWAXPY);
 
   MPI_Finalize();

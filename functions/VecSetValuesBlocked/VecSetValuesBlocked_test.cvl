@@ -2,91 +2,78 @@
 #include <mpi.h>
 #include <stdio.h>
 
-int main(void)
-{
+int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank, N = 8, bs = 2, ni = 2, blockIx[2] = {0, 1};  /* placing blocks at block 1 and block 3 */
+  int rank, size,
+      N = 8, bs = 2, ni = 2,
+      blockIx[2] = {0, 1}; /* placing blocks at block 1 and block 3 */
 
-  #ifdef USE_COMPLEX
+#ifdef USE_COMPLEX
   CIVL_RTYPE X_Real[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-            X_Imag[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+             X_Imag[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   CIVL_RTYPE Y_Real[bs * ni] = {1.0, 2.0, 3.0, 4.0},
-            Y_Imag[bs * ni] = {0.1, 0.2, 0.3, 0.4};
-  #else
-  CIVL_RTYPE X_Real[N]     = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  CIVL_RTYPE Y_Real[bs * ni]   = {1.0, 2.0, 3.0, 4.0};
-  #endif
+                         Y_Imag[bs * ni] = {0.1, 0.2, 0.3, 0.4};
+#else
+  CIVL_RTYPE X_Real[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  CIVL_RTYPE Y_Real[bs * ni] = {1.0, 2.0, 3.0, 4.0};
+#endif
 
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
-  $vec x = $vec_zero(N);
-  $vec y = $vec_zero(N);
+  $vec x = $vec_zero(N), y = $vec_zero(N);
 
   STYPE x_values[N], y_values[bs * ni];
 
   if (rank == 0) {
-    for (int i = 0; i < N; i++) {
-#ifdef USE_COMPLEX
-      x_values[i] = $make_complex(X_Real[i], X_Imag[i]);
-#else
-      x_values[i] = X_Real[i];
-#endif
-    }
+    for (int i = 0; i < N; i++)
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
 
-    /* Fill y_values with the block data from Y_Real[], Y_Imag[]. 
+    /* Fill y_values with the block data from Y_Real[], Y_Imag[].
        This array is length = bs*ni. */
-    for (int i = 0; i < bs * ni; i++) {
-#ifdef USE_COMPLEX
-      y_values[i] = $make_complex(Y_Real[i], Y_Imag[i]);
-#else
-      y_values[i] = Y_Real[i];
-#endif
-    }
-  }
+    for (int i = 0; i < bs * ni; i++)
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
 
-  x = $vec_make_from_dense(N, x_values);
+    x = $vec_make_from_dense(N, x_values);
 
-  /* Construct an "expected" vector y by manually setting 
-     each block's data in the correct positions. 
-     
-     For each block i in blockIx[i], we do:
-       for j=0..(bs-1):
-         y[ bs*(blockIx[i]) + j ] = y_values[ bs*i + j ]. 
-  */
-  for (int i = 0; i < ni; i++) {
-    int block_index = blockIx[i];
-    for (int j = 0; j < bs; j++) {
-      int elem_index = bs * block_index + j;
-      y = $vec_set(y, elem_index, y_values[bs*i + j]);
-    }
-  }
+    /* Construct an "expected" vector y by manually setting
+       each block's data in the correct positions.
 
-  if (rank == 0) {
-    $print("Initial Vector x:\n");
-    $vec_print(x);
-
-    $print("\nExpected Vector y after VecSetValuesBlocked:\n");
-    $vec_print(y);
-
-    $print("Block data (y_values):\n");
-    for (int i = 0; i < bs * ni; i++) {
-      $cprint(y_values[i]);
-    }
-
-    $print("\nBlock indices (blockIx):\n");
+       For each block i in blockIx[i], we do:
+         for j=0..(bs-1):
+           y[ bs*(blockIx[i]) + j ] = y_values[ bs*i + j ].
+    */
     for (int i = 0; i < ni; i++) {
-      $print("blockIx[", i, "] = ", blockIx[i], "\n");
+      int block_index = blockIx[i];
+      for (int j = 0; j < bs; j++) {
+        int elem_index = bs * block_index + j;
+        y = $vec_set(y, elem_index, y_values[bs * i + j]);
+      }
+    }
+
+    if (rank == 0) {
+      $print("\nNo.of procs = ", size, ", N = ", N, "\nx: ");
+      $vec_print(x);
+      $print("Block data (y_values): ");
+      for (int i = 0; i < bs * ni; i++) {
+        scalar_print(y_values[i]);
+        (i < bs * ni - 1) ? $print(", ") : $print("\n");
+      }
+      $print("Block indices (blockIx): ");
+      for (int i = 0; i < ni; i++) {
+        $print("blockIx[", i, "] = ", blockIx[i]);
+        (i < ni - 1) ? $print(", ") : $print("\n");
+      }
     }
   }
-
-  Vec actual   = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
 
   VecSetBlockSize(actual, bs);
 
-  PetscErrorCode err_actual = 
-    VecSetValuesBlocked(actual, ni, blockIx, y_values, INSERT_VALUES);
+  PetscErrorCode err_actual =
+      VecSetValuesBlocked(actual, ni, blockIx, y_values, INSERT_VALUES);
   $assert(err_actual == 0, "VecSetValuesBlocked failed in test.");
 
   PetscBool flg;
@@ -98,11 +85,12 @@ int main(void)
     $pathCondition();
   }
 
-  vecprint_mpi("\nActual   VecSetValuesBlocked", actual);
-  vecprint_mpi("\nExpected VecSetValuesBlocked", expected);
+  vecprint_mpi("Actual  ", actual);
+  vecprint_mpi("Expected", expected);
 
   VecDestroy(&actual);
   VecDestroy(&expected);
 
   MPI_Finalize();
+  return 0;
 }

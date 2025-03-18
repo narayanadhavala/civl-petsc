@@ -1,0 +1,69 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+
+$input int n = 4, scale = 3.0;
+
+int main() {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  $vec x = $vec_zero(0), y = $vec_zero(0);
+
+  STYPE x_values[n], alpha, expected_values[n];
+
+#ifdef USE_COMPLEX
+  alpha = $make_complex(scale, 0.0);
+#else
+  alpha = scale;
+#endif
+
+  if (rank == 0) {
+    for (int i = 0; i < n; i++) {
+#ifdef USE_COMPLEX
+      x_values[i] = $make_complex((double)(i + 1), 0.0);
+      expected_values[i] = $make_complex(0.0, 0.0);
+#else
+      x_values[i] = (double)(i + 1);
+      expected_values[i] = 0.0;
+#endif
+    }
+
+    // Define the expected calculation
+    for (int i = 0; i < n; i++) {
+#ifdef USE_COMPLEX
+      expected_values[i] = $cmul(x_values[i], alpha);
+#else
+      expected_values[i] = x_values[i] * alpha;
+#endif
+    }
+
+    x = $vec_make_from_dense(n, x_values);
+    y = $vec_make_from_dense(n, expected_values);
+
+    $print("Vector x:\n");
+    $vec_print(x);
+  }
+
+  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecScale_Seq(p_x, alpha);
+
+  $assert(err_actual == 0);
+  bool flg;
+  VecEqual(p_x, p_y, &flg);
+  $assert(flg == $true, "Scaled vector does not match expected value");
+
+  if (rank == 0) {
+    $print("\n");
+    $pathCondition();
+  }
+  vecprint_mpi("\nActual   Vec Scale:", p_x);
+  vecprint_mpi("\nExpected Vec Scale:", p_y);
+
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  MPI_Finalize();
+  return 0;
+}

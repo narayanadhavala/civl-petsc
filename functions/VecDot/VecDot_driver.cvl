@@ -15,7 +15,8 @@ $input CIVL_RTYPE X_Imag[N], Y_Imag[N];
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   // Vectors x and y
   $vec x = $vec_zero(0), y = $vec_zero(0);
@@ -28,7 +29,7 @@ int main(void) {
     }
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
-    $print("\nN = ", N,"\nx: ");
+    $print("\nNo.of Procs = ", size, ", N = ", N,"\nx: ");
     $vec_print(x);
     $print("\ny: ");
     $vec_print(y);
@@ -36,8 +37,8 @@ int main(void) {
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  PetscErrorCode err_actual = VecDot(p_x, p_y, &actual);
   VecDot_spec(p_x, p_y, &expected);
+  PetscErrorCode err_actual = VecDot(p_x, p_y, &actual);
 
   $assert(err_actual == 0);
   if (rank == 0) {
@@ -45,6 +46,7 @@ int main(void) {
     $pathCondition();
     $print("\nActual  ", actual, "\n\nExpected", expected, "\n");
   }
+  // $assert(actual == expected, "VecDot mismatch between actual and expected results.");
   $assert($equals(&actual, &expected), "VecDot mismatch between actual and expected results.");
 
   VecDestroy(&p_x);

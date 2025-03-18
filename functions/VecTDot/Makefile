@@ -6,20 +6,20 @@ VEC = $(SRC)/vec
 
 all: verify_real verify_complex
 
-test_real: VecTDot_test.cvl $(VEC)/petscvec.c $(INC)/petscvec.h
+test_real: VecTDot_test.cvl $(VEC)/petscvec.c
 	civl verify -input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -inputn=10 -sysIncludePath=$(INC) VecTDot_test.cvl $(VEC)/petscvec.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
 
-test_complex: VecTDot_test.cvl $(VEC)/petscvec.c $(INC)/petscvec.h
+test_complex: VecTDot_test.cvl $(VEC)/petscvec.c
 	civl verify -input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -inputn=10 -DUSE_COMPLEX -DCIVL_COMPLEX -sysIncludePath=$(INC) VecTDot_test.cvl $(VEC)/petscvec.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
 
-verify_real: VecTDot_driver.cvl $(VEC)/petscvec.c VecTDot.c $(INC)/petscvec.h
+verify_real: VecTDot_driver.cvl $(VEC)/petscvec.c VecTDot.c
 	civl verify -checkTermination=true $(if $(EXTRA_INPUTS),$(EXTRA_INPUTS),-input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -inputN_MIN=2 -inputN_MAX=2)\
-	 -DVecTDot=VecTDot_spec -sysIncludePath=$(INC) VecTDot_driver.cvl $(VEC)/petscvec.c\
+	 -DVecTDot=VecTDot_spec -DUSE_VEC_TDOT -sysIncludePath=$(INC) VecTDot_driver.cvl $(VEC)/petscvec.c\
 	  VecTDot.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
 
-verify_complex: VecTDot_driver.cvl $(VEC)/petscvec.c VecTDot.c $(INC)/petscvec.h
+verify_complex: VecTDot_driver.cvl $(VEC)/petscvec.c VecTDot.c
 	civl verify -checkTermination=true $(if $(EXTRA_INPUTS),$(EXTRA_INPUTS),-input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -inputN_MIN=2 -inputN_MAX=2)\
-	 -DVecTDot=VecTDot_spec -DUSE_COMPLEX -DCIVL_COMPLEX -sysIncludePath=$(INC) VecTDot_driver.cvl $(VEC)/petscvec.c\
+	 -DVecTDot=VecTDot_spec -DUSE_VEC_TDOT -DUSE_COMPLEX -DCIVL_COMPLEX -sysIncludePath=$(INC) VecTDot_driver.cvl $(VEC)/petscvec.c\
 	  VecTDot.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
 
 clean:
