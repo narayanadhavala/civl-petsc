@@ -84,7 +84,7 @@ This makefile is designed to automatically run tests on all the function impleme
    The makefile automatically looks inside the "functions" folder and finds every subfolder—ignoring any hidden folders and the "CIVLREP" folder. This means if we add a new function, it will be picked up automatically.
 
 2. **Running Full Tests**  
-   When user run `make all`, the makefile goes into each of those subfolders and runs a complete set of tests. These tests check different vector sizes (from 1 to 5) and different processor counts (from 1 to 3) for both real and complex cases.
+   When user run `make all`, the makefile goes into each of those subfolders and runs a complete set of tests. These tests check different vector sizes (from 1 to 3) and different processor counts (from 1 to 2) for both real and complex cases.
 
 3. **Cleaning Up**  
    The `make clean` target goes into each function folder and runs its clean routine.
