@@ -13,7 +13,8 @@ $input CIVL_RTYPE A_Imag[N];
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   $vec x = $vec_zero(0), y = $vec_zero(0);
   STYPE value[N];
@@ -21,28 +22,30 @@ int main(void) {
     STYPE value[N];
     for (int i = 0; i < N; i++)
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
-
     x = $vec_make_from_dense(N, value);
     y = $vec_make_from_dense(N, value);
-
-    $print("\nN = ", N, " \nx :");
+    $print("\nVecConjugate_Seq_driver: nprocs = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx :");
     $vec_print(x);
+#endif
   }
-
   Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
-
+  VecConjugate_Seq_spec(expected);
   PetscErrorCode actual_err = VecConjugate_Seq(actual);
   $assert(actual_err == 0);
-  VecConjugate_Seq_spec(expected);
-
+#ifdef DEBUG
   vecprint_seq("Actual  ", actual);
   vecprint_seq("Expected", expected);
-
+#endif
   bool flg;
   VecEqual(actual, expected, &flg);
   $assert(flg, "Actual & Expected mismatch.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&actual);
   VecDestroy(&expected);
   MPI_Finalize();

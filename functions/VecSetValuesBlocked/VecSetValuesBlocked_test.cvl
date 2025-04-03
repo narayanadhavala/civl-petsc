@@ -9,14 +9,11 @@ int main(void) {
       N = 8, bs = 2, ni = 2,
       blockIx[2] = {0, 1}; /* placing blocks at block 1 and block 3 */
 
-#ifdef USE_COMPLEX
-  CIVL_RTYPE X_Real[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-             X_Imag[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  CIVL_RTYPE Y_Real[bs * ni] = {1.0, 2.0, 3.0, 4.0},
-                         Y_Imag[bs * ni] = {0.1, 0.2, 0.3, 0.4};
-#else
   CIVL_RTYPE X_Real[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   CIVL_RTYPE Y_Real[bs * ni] = {1.0, 2.0, 3.0, 4.0};
+#ifdef USE_COMPLEX
+  CIVL_RTYPE X_Imag[N] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  CIVL_RTYPE Y_Imag[bs * ni] = {0.1, 0.2, 0.3, 0.4};
 #endif
 
   MPI_Comm_size(comm, &size);
@@ -87,10 +84,7 @@ int main(void) {
 
   vecprint_mpi("Actual  ", actual);
   vecprint_mpi("Expected", expected);
-
   VecDestroy(&actual);
   VecDestroy(&expected);
-
   MPI_Finalize();
-  return 0;
 }

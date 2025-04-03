@@ -1,7 +1,7 @@
 # Makefile for CIVL verification of function VecConjugate_Seq
 ROOT = ../..
 include $(ROOT)/common.mk
-MODSR =  VecConjugate_Seq_driver.cvl VecConjugate_Seq.c $(VEC)/petscvec.c $(VEC)/civlvec.cvl
+MODSR =  VecConjugate_Seq_driver.cvl VecConjugate_Seq.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
 MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
 DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
@@ -9,7 +9,7 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecConjugate_Seq=VecConjugate_Seq_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: runbig
+all: runsmall
 
 runbig: ver1r ver1c
 

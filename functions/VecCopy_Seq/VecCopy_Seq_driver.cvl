@@ -1,5 +1,5 @@
-#include <petscvec.h>
 #include <mpi.h>
+#include <petscvec.h>
 #undef VecCopy_Seq
 PetscErrorCode VecCopy_Seq(Vec xin, Vec yin);
 
@@ -14,7 +14,8 @@ $input CIVL_RTYPE A_Imag[N];
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   $vec x = $vec_zero(N), y = $vec_zero(N);
   if (rank == 0) {
@@ -23,10 +24,13 @@ int main(void) {
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
 
     x = $vec_make_from_dense(N, value);
-//    $print("\nN = ", N, " \nx: ");
+    $print("\nVecCopy_Seq_driver: nprocs = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
     $print("y:");
     $vec_print(y);
+#endif
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
@@ -35,18 +39,20 @@ int main(void) {
 
   VecCopy_Seq_spec(p_x, expected);
   PetscErrorCode err_actual = VecCopy_Seq(p_x, actual);
-  
   $assert(err_actual == 0);
+#ifdef DEBUG
   vecprint_seq("Actual  ", actual);
   vecprint_seq("Expected", expected);
-
+#endif
   bool flg;
   VecEqual(actual, expected, &flg);
   $assert(flg, "VecCopy_Seq mismatch between actual and expected results.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&actual);
   VecDestroy(&expected);
-
   MPI_Finalize();
 }

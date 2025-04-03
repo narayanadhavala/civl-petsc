@@ -2,6 +2,9 @@
 #undef VecScale_Seq
 
 PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecScale_Seq Alpha = ", alpha, "\n");
+#endif
   PetscFunctionBegin;
   // if (alpha == (PetscScalar)0.0)
   if (scalar_eq(alpha, scalar_zero)) {

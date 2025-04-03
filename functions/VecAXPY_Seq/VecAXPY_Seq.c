@@ -3,7 +3,7 @@
 
 PetscErrorCode VecAXPY_Seq(Vec yin, PetscScalar alpha, Vec xin) {
 #ifdef DEBUG
-  $print("Target VecAXPY_Seq: alpha=", alpha, "\n");
+  $print("DEBUG: Target VecAXPY_Seq: alpha=", alpha, "\n");
 #endif
   PetscFunctionBegin;
   /* assume that the BLAS handles alpha == 1.0 efficiently since we have no fast

@@ -1,6 +1,4 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecSetValuesBlocked
 
 PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[],
@@ -12,13 +10,11 @@ $input int bs;
 $assume(bs > 0 && bs <= N);
 $input int niBlocks;
 $assume(0 <= niBlocks && niBlocks <= (N / bs));
-
 $input int blockIx[niBlocks];
 $assume($forall(int i : 0..niBlocks - 1)(0 <= blockIx[i] &&
                                          blockIx[i] < (N / bs)));
 $assume($forall(int j : 0..niBlocks - 1) $forall(int k : 0..j - 1)
             blockIx[j] != blockIx[k]);
-
 $input CIVL_RTYPE Y_Real[bs * niBlocks], X_Real[N];
 #ifdef USE_COMPLEX
 $input CIVL_RTYPE Y_Imag[bs * niBlocks], X_Imag[N];
@@ -27,7 +23,7 @@ $input CIVL_RTYPE Y_Imag[bs * niBlocks], X_Imag[N];
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank, size;
+  int rank, size, iora;
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
@@ -35,15 +31,18 @@ int main(void) {
   STYPE x_vals[N], y_vals[bs * niBlocks];
 
   if (rank == 0) {
+    iora = $choose_int(3);
     for (int i = 0; i < N; i++)
       x_vals[i] = scalar_make(X_Real[i], X_Imag[i]);
-
     for (int i = 0; i < bs * niBlocks; i++)
       y_vals[i] = scalar_make(Y_Real[i], Y_Imag[i]);
-
     civl_x = $vec_make_from_dense(N, x_vals);
 
-    $print("\nNo.of procs = ", size, ", N = ", N, "\nx: ");
+    $print("\nVecSetValuesBlocked_driver: nprocs = ", size, ", N = ", N,
+           ", niBlocks = ", niBlocks, ", bs = ", bs,
+           ", iora = ", (InsertMode)iora, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(civl_x);
     $print("Block data (y_vals): ");
     for (int i = 0; i < bs * niBlocks; i++) {
@@ -55,33 +54,31 @@ int main(void) {
       $print("blockIx[", i, "] = ", blockIx[i]);
       (i < niBlocks - 1) ? $print(", ") : $print("\n");
     }
+#endif
   }
-
+  MPI_Bcast(&iora, 1, MPI_INT, 0, MPI_COMM_WORLD);
   Vec p_x = civlToPetscVec(civl_x, PETSC_DECIDE, comm);
   Vec expected_x = civlToPetscVec(civl_x, PETSC_DECIDE, comm);
 
   VecSetBlockSize(p_x, bs);
   VecSetBlockSize(expected_x, bs);
-
+  VecSetValuesBlocked_spec(expected_x, niBlocks, blockIx, y_vals, iora);
   PetscErrorCode err_actual =
-      VecSetValuesBlocked(p_x, niBlocks, blockIx, y_vals, INSERT_VALUES);
-  VecSetValuesBlocked_spec(expected_x, niBlocks, blockIx, y_vals,
-                           INSERT_VALUES);
-
+      VecSetValuesBlocked(p_x, niBlocks, blockIx, y_vals, iora);
   $assert(err_actual == 0);
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-  }
+#ifdef DEBUG
   vecprint_mpi("Actual  ", p_x);
   vecprint_mpi("Expected", expected_x);
+#endif
   PetscBool flg;
   VecEqual(p_x, expected_x, &flg);
   $assert(flg,
           "VecSetValuesBlocked mismatch between actual and expected values.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&expected_x);
-
   MPI_Finalize();
 }

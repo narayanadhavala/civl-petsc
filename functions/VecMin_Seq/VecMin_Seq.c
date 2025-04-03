@@ -3,7 +3,7 @@
 
 static PetscErrorCode VecMinMax_Seq(Vec xin, PetscInt *idx, PetscReal *z,
                                     PetscReal minmax,
-                                    int (cmp)(PetscReal, PetscReal)) {
+                                    int (*const cmp)(PetscReal, PetscReal)) {
   const PetscInt n = xin->map->n;
   PetscInt j = -1;
 
@@ -30,6 +30,9 @@ static PetscErrorCode VecMinMax_Seq(Vec xin, PetscInt *idx, PetscReal *z,
 }
 
 PetscErrorCode VecMin_Seq(Vec xin, PetscInt *idx, PetscReal *z) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMin_Seq called\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecMinMax_Seq(xin, idx, z, PETSC_MAX_REAL, VecMin_Seq_LT));
   PetscFunctionReturn(PETSC_SUCCESS);

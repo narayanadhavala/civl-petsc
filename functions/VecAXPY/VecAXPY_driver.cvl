@@ -1,6 +1,4 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecAXPY
 PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x);
 
@@ -30,8 +28,14 @@ int main(void) {
     y = $vec_make_from_dense(N, y_values);
     z = $vec_make_from_dense(N, y_values);
 
-    $print("\nNo.of procs = ", size, ", N = ", N,"\nx: "); $vec_print(x);
-    $print("y: "); $vec_print(y);
+    $print("\nVecAXPY_driver: nprocs = ", size, ", N = ", N,
+           ", Alpha = ", alpha, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+    $print("y: ");
+    $vec_print(y);
+#endif
   }
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, MPI_COMM_WORLD);
@@ -39,12 +43,19 @@ int main(void) {
   VecAXPY_spec(expectedAXPY, alpha, p_x);
   PetscErrorCode err_actual = VecAXPY(p_y, alpha, p_x);
   $assert(err_actual == 0);
+#ifdef DEBUG
   vecprint_mpi("Actual   AXPY", p_y);
   vecprint_mpi("Expected AXPY", expectedAXPY);
+#endif
   bool flg;
   VecEqual(p_y, expectedAXPY, &flg);
   $assert(flg, "VecAXPY mismatch between actual and expected results.");
-  VecDestroy(&p_x); VecDestroy(&p_y); VecDestroy(&expectedAXPY);
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  VecDestroy(&expectedAXPY);
   MPI_Finalize();
-  return 0;
 }

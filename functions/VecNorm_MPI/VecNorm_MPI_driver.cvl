@@ -22,14 +22,14 @@ int main(void) {
   if (rank == 0) {
     $elaborate(N);
     normType = $choose_int(5);
-    $print("VecNorm_MPI_driver: nprocs=", size, ", N=", N, ", normType=",
-	   $petsc_norm_name(normType), "...\n");
+    $print("\nVecNorm_MPI_driver: nprocs = ", size, ", N = ", N,
+           ", normType = ", $petsc_norm_name(normType), "...");
     STYPE value[N];
     for (int i = 0; i < N; i++)
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
     x = $vec_make_from_dense(N, value);
 #ifdef DEBUG
-    $print("x = ");
+    $print("\nx = ");
     $vec_print(x);
     $print("\n");
 #endif
@@ -41,20 +41,24 @@ int main(void) {
   PetscErrorCode err_actual = VecNorm_MPI(p_x, normType, actual);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  if (rank == 0) $print("\n"); $pathCondition(); $print("\n");
+  if (rank == 0)
+    $print("\n");
+  $pathCondition();
+  $print("\n");
   $print("Rank ", rank, ": Actual   = ", actual[0], "\n",
-	 "Expected = ", expected[0], "\n");
+         "Expected = ", expected[0], "\n");
 #endif
   $assert(actual[0] == expected[0]);
   if (normType == NORM_1_AND_2) {
 #ifdef DEBUG
     $print("Rank ", rank, ": Actual   = ", actual[1], "\n",
-	   "Expected = ", expected[1], "\n");
+           "Expected = ", expected[1], "\n");
 #endif
     $assert(actual[1] == expected[1]);
   }
-#ifdef DEBUG
-  $print("ok\n");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
 #endif
   VecDestroy(&p_x);
   MPI_Finalize();

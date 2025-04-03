@@ -5,6 +5,9 @@ static inline PetscErrorCode VecMinMax_MPI_Default(
     Vec xin, PetscInt *idx, PetscReal *z,
     PetscErrorCode (*VecMinMax_SeqFn)(Vec, PetscInt *, PetscReal *),
     const MPI_Op ops[2]) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMin_MPI called\n");
+#endif
   PetscFunctionBegin;
   /* Find the local max */
   PetscCall(VecMinMax_SeqFn(xin, idx, z));
@@ -39,6 +42,9 @@ static inline PetscErrorCode VecMinMax_MPI_Default(
 }
 
 PetscErrorCode VecMin_MPI(Vec xin, PetscInt *idx, PetscReal *z) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMin_MPI called\n");
+#endif
   const MPI_Op ops[] = {MPIU_MINLOC, MPIU_MIN};
 
   PetscFunctionBegin;

@@ -20,67 +20,62 @@ $input CIVL_RTYPE X_Imag[N], Y_Imag[nv * N];
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
-
-  /* Initialize vector x */
   STYPE x_vals[N];
-  for (int i = 0; i < N; i++)
-    x_vals[i] = scalar_make(X_Real[i], X_Imag[i]);
-
   $vec civl_x = $vec_make_from_dense(N, x_vals);
-
-  /* Prepare an array of CIVL vectors y[] of length nv */
   $vec civl_y[nv];
-  for (int i = 0; i < nv; i++) {
-    STYPE tmpArr[N];
-    for (int j = 0; j < N; j++) {
-      /* The j-th element of y[i] is Y_Real[i*N + j], Y_Imag[i*N + j] */
-      tmpArr[j] = scalar_make(Y_Real[i * N + j], Y_Imag[i * N + j]);
-    }
-    civl_y[i] = $vec_make_from_dense(N, tmpArr);
-  }
-
-  /* Print input vectors on rank 0 */
   if (rank == 0) {
-    $print("\nN = ", N, ", Number of y[nv] vectors = ", nv, "\nx: ");
+    for (int i = 0; i < N; i++)
+      x_vals[i] = scalar_make(X_Real[i], X_Imag[i]);
+    civl_x = $vec_make_from_dense(N, x_vals);
+    for (int i = 0; i < nv; i++) {
+      STYPE tmpArr[N];
+      for (int j = 0; j < N; j++) {
+        /* The j-th element of y[i] is Y_Real[i*N + j], Y_Imag[i*N + j] */
+        tmpArr[j] = scalar_make(Y_Real[i * N + j], Y_Imag[i * N + j]);
+      }
+      civl_y[i] = $vec_make_from_dense(N, tmpArr);
+    }
+    $print("\nVecMTDot_driver: nproc=", size, ", N = ", N,
+           ", Number of y[nv] vectors = ", nv, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(civl_x);
-
     for (int i = 0; i < nv; i++) {
       $print("\ny[", i, "]: ");
       $vec_print(civl_y[i]);
     }
+#endif
   }
-
   /* Convert CIVL vectors to PETSc Vecs for testing */
   STYPE val_ref[nv], val_actual[nv];
   Vec px = civlToPetscVec(civl_x, PETSC_DECIDE, comm);
   Vec py[nv];
   for (int i = 0; i < nv; i++)
     py[i] = civlToPetscVec(civl_y[i], PETSC_DECIDE, comm);
-
-  /* Compute dot products using VecMTDot */
-  PetscErrorCode err_actual = VecMTDot(px, nv, py, val_actual);
   VecMTDot_spec(px, nv, py, val_ref);
-
+  PetscErrorCode err_actual = VecMTDot(px, nv, py, val_actual);
   $assert(err_actual == 0);
+#ifdef DEBUG
   if (rank == 0) {
-    $print("\n");
-    $pathCondition();
     $print("\nActual   = ");
     for (int i = 0; i < nv; i++)
       scalar_print(val_actual[i]);
-    $print("\n\nExpected = ");
+    $print("\nExpected = ");
     for (int i = 0; i < nv; i++)
       scalar_print(val_ref[i]);
-    $print("\n\n");
   }
+#endif
   $assert($equals(&val_actual, &val_ref),
           "VecMTDot mismatch for Actual and expected values.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   for (int i = 0; i < nv; i++)
     VecDestroy(&py[i]);
   VecDestroy(&px);
-
   MPI_Finalize();
 }

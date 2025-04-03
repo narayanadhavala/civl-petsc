@@ -1,6 +1,4 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecWAXPY
 PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y);
 
@@ -15,7 +13,8 @@ $input CIVL_RTYPE X_Imag[N], Y_Imag[N], alpha_Imag;
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   // Vectors x and y
   $vec x = $vec_zero(N), y = $vec_zero(N), z = $vec_zero(N);
@@ -31,10 +30,14 @@ int main(void) {
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
 
-    $print("\nN =", N,", Alpha = ", alpha, "\nx: "); 
+    $print("\nVecWAXPY_driver: nprocs = ", size, ", N = ", N,
+           ", Alpha = ", alpha, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
-    $print("\ny: "); 
+    $print("\ny: ");
     $vec_print(y);
+#endif
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
@@ -43,22 +46,22 @@ int main(void) {
   Vec expectedWAXPY = civlToPetscVec(z, PETSC_DECIDE, comm);
   VecWAXPY_spec(expectedWAXPY, alpha, p_x, p_y);
   PetscErrorCode err_actual = VecWAXPY(p_w, alpha, p_x, p_y);
-  
+
   $assert(err_actual == 0);
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-  }
+#ifdef DEBUG
   vecprint_mpi("Actual  ", p_w);
   vecprint_mpi("Expected", expectedWAXPY);
+#endif
   bool flg;
   VecEqual(p_w, expectedWAXPY, &flg);
   $assert(flg, "VecWAXPY mismatch between actual and expected results.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   VecDestroy(&p_w);
   VecDestroy(&expectedWAXPY);
-
   MPI_Finalize();
 }

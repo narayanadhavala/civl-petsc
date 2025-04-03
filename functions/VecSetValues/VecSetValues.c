@@ -3,6 +3,9 @@
 
 PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             const PetscScalar y[], InsertMode iora) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecSetValues called\n");
+#endif
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni)

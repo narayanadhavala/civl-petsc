@@ -1,6 +1,4 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecAXPBYPCZ
 PetscErrorCode VecAXPBYPCZ(Vec z, PetscScalar alpha, PetscScalar beta,
                            PetscScalar gamma, Vec x, Vec y);
@@ -18,13 +16,11 @@ $input CIVL_RTYPE X_Imag[N], Y_Imag[N], Z_Imag[N], alpha_Imag, beta_Imag,
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   // Vectors x and y
-  $vec x = $vec_zero(N);
-  $vec y = $vec_zero(N);
-  $vec z = $vec_zero(N);
-  $vec w = $vec_zero(N);
+  $vec x = $vec_zero(N), y = $vec_zero(N), z = $vec_zero(N), w = $vec_zero(N);
 
   STYPE x_values[N], y_values[N], z_values[N], alpha, beta, gamma;
 
@@ -38,38 +34,38 @@ int main(void) {
       y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
       z_values[i] = scalar_make(Z_Real[i], Z_Imag[i]);
     }
-
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
     z = $vec_make_from_dense(N, z_values);
-
-    $print("\nN = ", N,"\nx: ");
+    $print("\nVecAXPBYPCZ_driver: nprocs = ", size, ", N = ", N,
+           ", Alpha = ", alpha, ", Beta = ", beta, ", Gamma = ", gamma, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
     $print("\ny: ");
     $vec_print(y);
     $print("\nz: ");
     $vec_print(z);
+#endif
   }
-
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
   Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
   Vec expected = civlToPetscVec(z, PETSC_DECIDE, comm);
-
   VecAXPBYPCZ_spec(expected, alpha, beta, gamma, p_x, p_y);
   PetscErrorCode err_actual = VecAXPBYPCZ(p_z, alpha, beta, gamma, p_x, p_y);
   $assert(err_actual == 0);
-
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-  }
+#ifdef DEBUG
   vecprint_mpi("Actual  ", p_z);
   vecprint_mpi("Expected", expected);
+#endif
   bool flg;
   VecEqual(p_z, expected, &flg);
   $assert(flg, "VecAXPBYPCZ mismatch between actual and expected results.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   VecDestroy(&p_z);

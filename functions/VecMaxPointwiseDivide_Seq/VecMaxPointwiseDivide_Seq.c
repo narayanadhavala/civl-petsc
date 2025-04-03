@@ -2,6 +2,9 @@
 #undef VecMaxPointwiseDivide_Seq
 
 PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMaxPointwiseDivide_Seq: max = ", max, "\n");
+#endif
   const PetscInt n = xin->map->n;
   const PetscScalar *xx, *yy;
   PetscReal m = 0.0;

@@ -23,8 +23,9 @@ int main() {
     for (int i = 0; i < N; i++)
       x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
     x = $vec_make_from_dense(N, x_values);
-    $print("VecMax_Seq: nprocs=", nprocs, ", N=", N, "\n");
+    $print("\nVecMax_Seq_driver: nprocs = ", nprocs, ", N = ", N, " ...");
 #ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
 #endif
   }
@@ -33,8 +34,6 @@ int main() {
   PetscErrorCode err_actual = VecMax_Seq(p_x, &i_actual, &actual);
 #ifdef DEBUG
   if (rank == 0) {
-    $print("\n");
-    $pathCondition();
     $print("\nActual Vec Max   = ", actual, " at index ", i_actual, "\n\n",
            "Expected Vec Max = ", expected, " at index ", i_expected, "\n\n");
   }
@@ -42,6 +41,8 @@ int main() {
   $assert(err_actual == 0);
   $assert(actual == expected, "Value mismatch");
   $assert(i_actual == i_expected, "Index mismactch");
+  if (rank == 0)
+	  $print(" ok ");
   VecDestroy(&p_x);
   MPI_Finalize();
 }

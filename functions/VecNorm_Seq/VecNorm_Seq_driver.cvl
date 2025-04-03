@@ -24,14 +24,14 @@ int main(void) {
   if (rank == 0) {
     $elaborate(N);
     normType = $choose_int(5);
-    $print("VecNorm_Seq_driver: nprocs=", size, ", N=", N, ", normType=",
-	   $petsc_norm_name(normType), "...\n");
+    $print("\nVecNorm_Seq_driver: nprocs = ", size, ", N = ", N,
+           ", normType = ", $petsc_norm_name(normType), " ...");
     STYPE value[N];
     for (int i = 0; i < N; i++)
       value[i] = scalar_make(X_Real[i], X_Imag[i]);
     x = $vec_make_from_dense(N, value);
 #ifdef DEBUG
-    $print("x = ");
+    $print("\nx = ");
     $vec_print(x);
     $print("\n");
 #endif
@@ -45,22 +45,22 @@ int main(void) {
   if (normType == NORM_1_AND_2) {
 #ifdef DEBUG
     $print("Rank ", rank, ": actual   = ", actual, "\n",
-	   "expected = ", expected, "\n\n");
+           "expected = ", expected, "\n\n");
 #endif
-    $assert($equals(&actual, &expected),
-	    "Actual and expected are not equal\n");
+    $assert($equals(&actual, &expected), "Actual and expected are not equal\n");
   } else {
 #ifdef DEBUG
     $print("Rank ", rank, ": actual   = ", actual[0], "\n",
-	   "expected = ", expected[0], "\n\n");
+           "expected = ", expected[0], "\n\n");
 #endif
     $assert($equals(&actual[0], &expected[0]),
-	    "Actual and expected are not equal\n");
+            "Actual and expected are not equal\n");
   }
   vec_destroy_seq(p_x1);
   vec_destroy_seq(p_x2);
   MPI_Finalize();
-#ifdef DEBUG
-  $print("ok\n");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
 #endif
 }

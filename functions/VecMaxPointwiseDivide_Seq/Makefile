@@ -1,25 +1,37 @@
+# Makefile for CIVL verification of function VecMaxPointwiseDivide_Seq
 ROOT = ../..
 include $(ROOT)/common.mk
-INC = $(ROOT)/scaffolding/include
-SRC = $(ROOT)/scaffolding/src
-VEC = $(SRC)/vec
+MODSR =  VecMaxPointwiseDivide_Seq_driver.cvl VecMaxPointwiseDivide_Seq.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
+MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
+DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
+  $(INC)/civlvec.cvh
+VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
+  -DVecMaxPointwiseDivide_Seq=VecMaxPointwiseDivide_Seq_spec
+VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: verify_real verify_complex
+all: runsmall
 
-verify_real: VecMaxPointwiseDivide_Seq_driver.cvl $(VEC)/petscvec.c VecMaxPointwiseDivide_Seq.c $(INC)/petscvec.h 
-	civl verify -checkTermination=true $(if $(EXTRA_INPUTS),$(EXTRA_INPUTS),-input_mpi_nprocs=1 -inputN_MIN=2 -inputN_MAX=3)\
-	 -DVecMaxPointwiseDivide_Seq=VecMaxPointwiseDivide_Seq_spec -sysIncludePath=$(INC) VecMaxPointwiseDivide_Seq_driver.cvl\
-	  $(VEC)/petscvec.c VecMaxPointwiseDivide_Seq.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl 
+runbig: ver1r ver1c
 
-verify_complex: VecMaxPointwiseDivide_Seq_driver.cvl $(VEC)/petscvec.c VecMaxPointwiseDivide_Seq.c $(INC)/petscvec.h 
-	civl verify -checkTermination=true $(if $(EXTRA_INPUTS),$(EXTRA_INPUTS),-input_mpi_nprocs=1 -inputN_MIN=2 -inputN_MAX=2)\
-	 -DVecMaxPointwiseDivide_Seq=VecMaxPointwiseDivide_Seq_spec -DUSE_COMPLEX -DCIVL_COMPLEX -sysIncludePath=$(INC)\
-	  VecMaxPointwiseDivide_Seq_driver.cvl $(VEC)/petscvec.c VecMaxPointwiseDivide_Seq.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl 
+runsmall: versmall
+
+# Note: add -DDEBUG to any command below to see lots of detail
+
+ver1r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver1c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+debug: $(DEPS)
+	$(VERIFYR) -DDEBUG -input_mpi_nprocs=1 -inputN_MIN=3 -inputN_MAX=3 $(MODSR)
+	$(VERIFYC) -DDEBUG -input_mpi_nprocs=1 -inputN_MIN=3 -inputN_MAX=3 $(MODSC)
+
+versmall: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=3 $(MODSR)
+	$(VERIFYC) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=3 $(MODSC)
 
 clean:
 	rm -rf *.o *~ *.tmp *.exec CIVLREP *.dSYM
 
-clear:
-	clear
-
-.PHONY: clean test
+.PHONY: all runbig runsmall ver1r ver1c debug versmall clean

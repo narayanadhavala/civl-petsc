@@ -1,6 +1,4 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecScale
 PetscErrorCode VecScale(Vec x, PetscScalar alpha);
 
@@ -15,38 +13,38 @@ $input CIVL_RTYPE X_Imag[N], alpha_Imag;
 int main() {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   $vec x = $vec_zero(N);
-
   STYPE x_values[N], alpha = scalar_make(alpha_Real, alpha_Imag);
-
   if (rank == 0) {
     for (int i = 0; i < N; i++)
       x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
-
     x = $vec_make_from_dense(N, x_values);
-
-    $print("\nN = ", N, ", alpha = ", alpha, "\nx: ");
+    $print("\nVecDot_driver: nprocs = ", size, ", N = ", N, ", Alpha = ", alpha,
+           " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
+#endif
   }
-
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_expected = civlToPetscVec(x, PETSC_DECIDE, comm);
   VecScale_spec(p_expected, alpha);
   PetscErrorCode err_actual = VecScale(p_x, alpha);
-
   $assert(err_actual == 0);
-    if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-  }
+#ifdef DEBUG
   vecprint_mpi("Actual  ", p_x);
   vecprint_mpi("Expected", p_expected);
+#endif
   bool flg;
   VecEqual(p_x, p_expected, &flg);
   $assert(flg, "VecScale mismatch actual and expected values.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_expected);
   MPI_Finalize();

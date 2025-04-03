@@ -17,7 +17,8 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val);
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   $vec x = $vec_zero(N);
   if (rank == 0) {
@@ -26,8 +27,12 @@ int main(void) {
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
     x = $vec_make_from_dense(N, value);
     $assume($vec_norm(x, 2) > 0.0);
-    $print("\nN = ", N, "\nx: ");
+
+    $print("\nVecNormalize_driver: nprocs = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
+#endif
   }
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_expected = civlToPetscVec(x, PETSC_DECIDE, comm);
@@ -36,13 +41,14 @@ int main(void) {
   PetscErrorCode err_actual = VecNormalize(p_x, &actual);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
+  if (rank == 0)
     $print("\nActual   = ", actual, "\n", "Expected = ", expected, "\n");
-  }
 #endif
   $assert(actual == expected);
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_expected);
   MPI_Finalize();

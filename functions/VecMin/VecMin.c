@@ -3,7 +3,7 @@
 
 PetscErrorCode VecMin(Vec x, PetscInt *p, PetscReal *val) {
 #ifdef DEBUG
-  $print("Target VecMin\n");
+  $print("DEBUG: Target VecMin: val =", val, "\n");
 #endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);

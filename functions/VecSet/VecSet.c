@@ -58,6 +58,9 @@ PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha,
 }
 
 PetscErrorCode VecSet(Vec x, PetscScalar alpha) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecSet called\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecSetAsync_Private(x, alpha, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);

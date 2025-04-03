@@ -64,4 +64,14 @@ $vec $vec_sub($vec vec1, $vec vec2);
 /* Scalar times a vector */
 $vec $vec_scalar_mul(STYPE a, $vec vec);
 
+/* Finds the maximum value in the vector and the lowest index where the maximum
+   occurs. For complex vectors finds the maximum of the real component. If vec
+   has length 0 index is set to -1 and max is left unchanged */
+void $vec_max($vec vec, CIVL_RTYPE *max, int *index);
+
+/* Finds the minumum value in the vector and the lowest index where the minumum
+   occurs. For complex vectors finds the minumum of the real component. If vec
+   has length 0 index is set to -1 and min is left unchanged */
+void $vec_min($vec vec, CIVL_RTYPE *min, int *index);
+
 #endif

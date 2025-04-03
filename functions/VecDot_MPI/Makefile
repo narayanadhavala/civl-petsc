@@ -1,7 +1,7 @@
 # Makefile for CIVL verification of function VecDot_MPI
 ROOT = ../..
 include $(ROOT)/common.mk
-MODSR =  VecDot_MPI_driver.cvl VecDot_MPI.c $(VEC)/petscvec.c $(VEC)/civlvec.cvl
+MODSR =  VecDot_MPI_driver.cvl VecDot_MPI.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
 MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
 DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
@@ -9,7 +9,7 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecDot_MPI=VecDot_MPI_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: runbig
+all: runsmall
 
 runbig: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
 

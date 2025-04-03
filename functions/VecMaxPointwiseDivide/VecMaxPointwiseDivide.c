@@ -2,6 +2,9 @@
 #undef VecMaxPointwiseDivide
 
 PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMaxPointwiseDivide: max=", max, "\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 2);

@@ -27,6 +27,9 @@ static inline PetscErrorCode VecMXDot_MPI_Default(
 
 PetscErrorCode VecMTDot_MPI(Vec xin, PetscInt nv, const Vec y[],
                             PetscScalar *z) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMTDot_MPI called\n");
+#endif
   PetscFunctionBegin;
   PetscCall(VecMXDot_MPI_Default(xin, nv, y, z, VecMTDot_Seq));
   PetscFunctionReturn(PETSC_SUCCESS);

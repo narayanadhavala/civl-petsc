@@ -37,6 +37,9 @@ PetscErrorCode VecMXDot_Private(
 }
 
 PetscErrorCode VecMTDot(Vec x, PetscInt nv, const Vec y[], PetscScalar val[]) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecMTDot: nv", nv, "\n");
+#endif
   PetscFunctionBegin;
   // PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscCall(VecMXDot_Private(x, nv, y, val, x->ops->mtdot, VEC_MTDot));

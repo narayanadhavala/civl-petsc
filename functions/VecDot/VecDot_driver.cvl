@@ -29,10 +29,13 @@ int main(void) {
     }
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
-    $print("\nNo.of Procs = ", size, ", N = ", N,"\nx: ");
+    $print("\nVecDot_driver: nprocs = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
     $print("\ny: ");
     $vec_print(y);
+#endif
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
@@ -41,14 +44,15 @@ int main(void) {
   PetscErrorCode err_actual = VecDot(p_x, p_y, &actual);
 
   $assert(err_actual == 0);
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-    $print("\nActual  ", actual, "\n\nExpected", expected, "\n");
-  }
-  // $assert(actual == expected, "VecDot mismatch between actual and expected results.");
-  $assert($equals(&actual, &expected), "VecDot mismatch between actual and expected results.");
-
+#ifdef DEBUG
+  $print("\nActual  ", actual, "\n\nExpected", expected, "\n");
+#endif
+  $assert($equals(&actual, &expected),
+          "VecDot mismatch between actual and expected results.");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   MPI_Finalize();

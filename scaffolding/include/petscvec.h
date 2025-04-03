@@ -26,19 +26,11 @@ typedef double PetscReal;
 #define PETSC_REAL MPI_DOUBLE // used in MPI communication
 
 // Operations on complex numbers that also make sense for reals...
-#ifdef USE_COMPLEX
 typedef STYPE PetscScalar;
 #define PetscConj(a) scalar_conj(a)
-#define PetscImaginaryPart(a) ((a).imag)
-#define PetscRealPart(a) ((a).real)
+#define PetscImaginaryPart(a) scalar_imag(a)
+#define PetscRealPart(a) scalar_real(a)
 #define PetscAbsScalar(a) scalar_abs(a)
-#else
-typedef PetscReal PetscScalar;
-#define PetscConj(a) scalar_conj(a)
-#define PetscImaginaryPart(a) ((PetscReal)(0))
-#define PetscRealPart(a) (a)
-#define PetscAbsScalar(a) scalar_abs(a)
-#endif
 
 // PETSc's Boolean values
 #define PETSC_FALSE 0
@@ -115,10 +107,11 @@ typedef enum {
   IS_INFO_MAX = 5
 } ISInfo;
 
-// Forward declarations to resolve mutual dependencies
+// Definition of struct _p_PetscObject and its typedef PetscObject
 struct _p_PetscObject;
 typedef struct _p_PetscObject *PetscObject;
 
+// Definition of PetscObjectList as a pointer to struct _n_PetscObjectList
 struct _n_PetscObjectList;
 typedef struct _n_PetscObjectList *PetscObjectList;
 
@@ -131,7 +124,10 @@ struct _n_PetscObjectList {
   PetscObjectList next;
 };
 
-// Definition of struct _p_PetscObject
+/* Definition of struct _p_PetscObject
+   Represents a PETSc object with metadata, state tracking, and composed data
+   arrays.
+   - Extracted from petscimpl.h */
 struct _p_PetscObject {
   PetscClassId classid;
   const char *type_name;
@@ -142,8 +138,10 @@ struct _p_PetscObject {
   PetscReal *realcomposeddata; // Array of data
 };
 
-// A component of a Vec struct specifying how the vector is
-// distributed across processes.
+/* Definition of struct map_s
+  Represents a simple mapping structure for PETSc vectors, including local
+  and global sizes, range, block size, and number of processes.
+  - Extracted from vecimpl.h */
 typedef struct map_s {
   PetscInt n;            // local_size
   PetscInt N;            // global_size
@@ -153,6 +151,7 @@ typedef struct map_s {
 } *SimpleMap;
 
 typedef struct _p_IS *IS;
+
 /* IS - Abstract PETSc object used for efficient indexing into vector and
  * matrices */
 struct _p_IS {
@@ -182,6 +181,8 @@ typedef struct Vec_s {
   int read_lock_count;
 } *Vec;
 
+typedef struct _ISOps *_ISOps;
+
 // PetscViewer is a datatype representing an object used for viewing PETSc
 // objects
 // TODO: why the strange name _p_...?
@@ -193,7 +194,7 @@ typedef enum {
   PETSC_VIEWER_STDOUT_SELF
 } PetscViewerFormat;
 
-// TODO why strange name?
+// Defines the viewer data structure.
 struct _p_PetscViewer {
   PetscViewerFormat format;
   int iformat;
@@ -205,6 +206,9 @@ typedef struct {
   PetscInt index;
 } VecLocation;
 
+/*   _p_PetscDeviceContext - Internal structure to manage device context,
+  including solver contexts, stream dependencies, and child context management.
+   - Extracted from deviceimpl.h */
 struct _p_PetscDeviceContext {
   PETSCHEADER(struct _DeviceContextOps);
   void *data; /* solver contexts, event, stream */
@@ -216,21 +220,11 @@ struct _p_PetscDeviceContext {
   PetscBool usersetdevice;
 };
 
-// PETSC_SUCCESS represents a successful PETSc operation
+// PetscErrorCodes extracted from petscsystypes.h
 #define PETSC_SUCCESS ((PetscErrorCode)0)
-
-// PETSC_ERR_ARG_OUTOFRANGE represents an error code for out-of-range input
-// arguments
 #define PETSC_ERR_ARG_OUTOFRANGE ((PetscErrorCode)63)
-
-// PETSC_ERR_ARG_SIZ represents an error code for nonconforming object sizes
-// used in PETSc operations
 #define PETSC_ERR_ARG_SIZ ((PetscErrorCode)60)
-
-// PETSC_ERR_SUP represents an error code indicating no support for the
-// requested operation in PETSc
 #define PETSC_ERR_SUP ((PetscErrorCode)56)
-
 #define PETSC_ERR_ARG_NULL ((PetscErrorCode)85)
 #define PETSC_ERR_ARG_CORRUPT ((PetscErrorCode)64)
 #define PETSC_ERR_ARG_WRONG ((PetscErrorCode)62)
@@ -241,13 +235,15 @@ struct _p_PetscDeviceContext {
 #define PETSC_ERR_ARG_INCOMP ((PetscErrorCode)75)
 #define PETSC_ERROR_INITIAL 0
 
-// PETSC_DECIDE represents a constant used in place of an integer argument
-// when you want PETSc to choose the value for that argument
+/* PETSC_DECIDE represents a constant used in place of an integer argument
+   when you want PETSc to choose the value for that argument
+   - Extracted from petscsys.h*/
 #ifndef PETSC_DECIDE
 #define PETSC_DECIDE (-1)
 #endif
 
-// PETSC_DETERMINE is like PETSC_DECIDE.  // TODO: why do we need both?
+/* PETSC_DETERMINE is like PETSC_DECIDE.
+   - Extracted from petscsys.h*/
 #ifndef PETSC_DETERMINE
 #define PETSC_DETERMINE PETSC_DECIDE
 #endif
@@ -258,41 +254,26 @@ struct _p_PetscDeviceContext {
 // PETSC_COMM_WORLD is the MPI communiator used for PETSc communiation
 #define PETSC_COMM_WORLD MPI_COMM_WORLD
 
-#ifndef MPI_COMM_SELF
-#define MPI_COMM_SELF ((MPI_Comm)0x44000000)
-#endif
-
-#ifndef __isfinitef
-#define __isfinitef(x) 1
-#endif
-
-/* In some header or a place before math.h is included: */
-#ifndef __isfinitel
-#define __isfinitel(x) 1
-#endif
-
 #define PETSC_COMM_SELF MPI_COMM_SELF
 
-// PetscInt_FMT is a format specifier for PetscInt used in formatted output
+/* PetscInt_FMT is a format specifier for PetscInt used in formatted output
+   - Extracted from petscsystypes.h */
 #define PetscInt_FMT "d"
 
-// PetscSqrtReal computes the square root of a real number.
+/* PetscSqrtReal computes the square root of a real number.
+   - Extracted from petscmath.h*/
 #define PetscSqrtReal(a) sqrt(a)
 
-// an ordered pair: (real, int) used in MPI operations
-#define PETSC_REAL_INT MPI_DOUBLE_INT
-
-// PETSC_SMALL represents a small value used for numerical comparison
-#define PETSC_SMALL 1.e-10
-
-// PETSC_MAX_REAL represents the maximum real number value
+/* PETSC_MAX_REAL represents the maximum  double real number value
+   - Extracted from petscmath.h*/
 #define PETSC_MAX_REAL 1.7976931348623157e+308
-// #define PETSC_MAX_REAL 1'000'000
 
-// PETSC_MIN_REAL represents the minimum real number value
+/* PETSC_MIN_REAL represents the minimum double real number value
+   - Extracted from petscmath.h*/
 #define PETSC_MIN_REAL (-PETSC_MAX_REAL)
 
-// Enumeration of different types of norms used in PETSc
+/* Enumeration of different types of norms used in PETSc
+   - Extracted from petscvec.h*/
 typedef enum NORM_TYPE {
   NORM_1 = 0,
   NORM_2 = 1,
@@ -303,7 +284,8 @@ typedef enum NORM_TYPE {
 
 extern PetscInt NormIds[5];
 
-// Enumeration of different insert modes used in PETSc
+/* Enumeration of different insert modes used in PETSc
+   -Extracted from petscsystypes.h*/
 typedef enum INSERT_MODE {
   NOT_SET_VALUES,
   INSERT_VALUES,
@@ -316,10 +298,12 @@ typedef enum INSERT_MODE {
   ADD_BC_VALUES
 } InsertMode;
 
-// PetscCall is a macro used to wrap calls to PETSc functions
+/* PetscCall is a macro used to wrap calls to PETSc functions
+   - Extracted from petscerror.h */
 #define PetscCall(a) a
 
-// PetscFunctionBeginUser marks the beginning of a user-defined function
+/* PetscFunctionBeginUser marks the beginning of a user-defined function
+   - Extracted from petscerror.h */
 #define PetscFunctionBeginUser
 
 /*
@@ -410,8 +394,12 @@ typedef enum INSERT_MODE {
     }                                                                          \
   } while (0)
 
+/* A unique id used to identify each Vector class.
+   - Extracted from petscvec.h*/
 #define VEC_CLASSID 123
 
+/* A unique id used to identify for IS class.
+   - Extracted from petscvec.h*/
 #define IS_CLASSID 124
 
 PetscErrorCode PetscError(MPI_Comm comm, int line, const char *func,
@@ -435,8 +423,11 @@ PetscErrorCode PetscError(MPI_Comm comm, int line, const char *func,
     }                                                                          \
   } while (0)
 
+/* Macros to test if a PETSc object is valid and if pointers are valid
+   - Extracted from petscimpl.h*/
 PetscErrorCode PetscValidHeaderSpecific(void *x, PetscClassId cid, int arg);
 
+/* Use this macro to check if the type is set */
 #define PetscValidType(a, arg) ((void)0)
 
 #define PetscLogEventBegin(e, o1, o2, o3, o4) ((void)0)
@@ -445,6 +436,7 @@ PetscErrorCode PetscValidHeaderSpecific(void *x, PetscClassId cid, int arg);
 
 #define PetscAssertPointer(h, arg) $assert(h != NULL)
 
+// <--- Dependencies for PetscUseTypeMethod --->
 #define PETSC_FIRST_ARG_(N, ...) N
 
 #define PETSC_FIRST_ARG(args) PETSC_FIRST_ARG_ args
@@ -486,6 +478,9 @@ PetscErrorCode PetscValidHeaderSpecific(void *x, PetscClassId cid, int arg);
 #define PETSC_REST_ARG(...)                                                    \
   PETSC_REST_HELPER(PETSC_NUM(__VA_ARGS__), __VA_ARGS__)
 
+/* PetscUseTypeMethod - Call a method on a `PetscObject`, that is a function in
+   the objects function table `obj->ops`, error if the method does not exist
+   - Extracted from petscimpl.h */
 #define PetscUseTypeMethod(obj, ...)                                           \
   do {                                                                         \
     PetscCheck((obj)->ops->PETSC_FIRST_ARG((__VA_ARGS__, unused)),             \
@@ -497,6 +492,9 @@ PetscErrorCode PetscValidHeaderSpecific(void *x, PetscClassId cid, int arg);
         obj PETSC_REST_ARG(__VA_ARGS__)));                                     \
   } while (0)
 
+/* PetscValidLogicalCollectiveInt - Validates that an integer value is logically
+  collective across all processes.
+  - Extracted from petscimpl.h */
 #define PetscValidLogicalCollectiveInt(a, b, arg)                              \
   do {                                                                         \
     PetscInt b0 = (b), b1[2], b2[2];                                           \
@@ -509,36 +507,52 @@ PetscErrorCode PetscValidHeaderSpecific(void *x, PetscClassId cid, int arg);
                "Int value must be same on all processes, argument # %d", arg); \
   } while (0)
 
+/*   PetscValidFunction - Macro to validate a function pointer, ensuring it is
+  not NULL.
+  - Extracted from petscimpl.h */
 #define PetscValidFunction(f, arg)                                             \
   PetscCheck((f), PETSC_COMM_SELF, PETSC_ERR_ARG_NULL,                         \
              "Null Function Pointer: Parameter # %d", arg)
 
+/* VecSetErrorIfLocked - Macro to check if a vector is null or locked for
+  access.
+  - Extracted from petscvec.h */
 #define VecSetErrorIfLocked(x, args)                                           \
   do {                                                                         \
     $assert((x), "Error: Null vector passed to VecSetErrorIfLocked.\n");       \
     $assert((x)->read_lock_count == 0, "Vector was locked for access.\n");     \
   } while (0)
 
+/* PetscMalloc1 - Allocates memory for an array of given size and assigns it to
+  the provided pointer.
+  - Extracted from petscsys.h */
 #define PetscMalloc1(m1, r1)                                                   \
   (*(r1) = malloc((m1) * sizeof(*(r1))), PETSC_SUCCESS)
 
+/* PetscObjectComposedDataGetReal - Retrieves real-valued composed data
+  associated with a PetscObject.
+  - Extracted from petscimpl.h */
 PetscErrorCode PetscObjectComposedDataGetReal(PetscObject obj, PetscInt id,
                                               PetscReal *data, PetscBool *flag);
 
+/* PetscObjectComposedDataSetReal - Sets real-valued composed data associated
+with a PetscObject.
+- Extracted from petscimpl.h */
 PetscErrorCode PetscObjectComposedDataSetReal(PetscObject obj, PetscInt id,
                                               PetscReal data);
 
+/*   PetscInfo_Private - Logs informational messages associated with a
+  PetscObject.
+  - Extracted from petsclog.h */
 PetscErrorCode PetscInfo_Private(PetscObject obj, const char message[]);
 
 #define PetscInfo(A, ...) PetscInfo_Private(((PetscObject)A), __VA_ARGS__)
 
-PetscBool PetscIsInfOrNanReal(PetscReal v);
-
 int __isfinited(double x);
 
-bool $is_lessthan(PetscScalar alpha, double n);
-
-bool $is_greaterthan(PetscScalar alpha, double n);
+/* $Scalar_Bcast - Broadcasts a PetscScalar value across processes in an MPI
+  communicator.*/
+void $Scalar_Bcast(PetscScalar *val, int count, int root, MPI_Comm comm);
 
 #define VecCheckAssembled(a) ((void)0)
 
@@ -592,51 +606,62 @@ bool $is_greaterthan(PetscScalar alpha, double n);
 
 typedef int PetscLogEvent;
 
+/*   PetscIsInfReal - Checks if a given PetscReal value is infinite.
+  - Extracted from petscmath.h */
 PetscBool PetscIsInfReal(PetscReal a);
 
+/*   PetscIsNanReal - Checks if a given PetscReal value is NaN (Not a Number).
+  - Extracted from petscmath.h */
 PetscBool PetscIsNanReal(PetscReal a);
+
+/*   PetscIsInfOrNanReal - Checks if a given PetscReal value is either infinite
+  or NaN.
+  - Extracted from petscmath.h */
+PetscBool PetscIsInfOrNanReal(PetscReal v);
 
 // PetscCallBLAS calls a BLAS function
 #define PetscCallBLAS(x, X) X
 
 #define PetscCallMPI(x) (x)
 
+/*   MPIU_Allreduce - Wrapper macro for MPI_Allreduce to simplify usage with
+  consistent arguments.
+  - Extracted from petscsys.h */
 #define MPIU_Allreduce(a, b, c, d, e, fcomm)                                   \
   MPI_Allreduce((a), (b), (c), (d), (e), (fcomm))
 
-/* #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
-  do {                                                                         \
-    int ierr = MPI_Allreduce((a), (b), (c), (d), (e), (fcomm));                \
-    if (ierr != MPI_SUCCESS) {                                                 \
-      fprintf(stderr, "Error in MPI_Allreduce: %d\n", ierr);                   \
-      return ierr;                                                             \
-    }                                                                          \
-  } while (0) */
-
-// PetscArraycpy copies elements from one array (str1) to another (str2)
+/* PetscArraycpy copies elements from one array (str1) to another (str2)
+  - Extracted from petscstring.h */
 #define PetscArraycpy(str1, str2, cnt)                                         \
   ((sizeof(*(str1)) == sizeof(*(str2)))                                        \
        ? PetscMemcpy((str1), (str2), (size_t)(cnt) * sizeof(*(str1)))          \
        : PETSC_ERR_ARG_SIZ)
 
-// Macro to check if two vectors have the same type
+/* PetscCheckSameType - Macro to check if two vectors have the same type
+  - Extracted from petscimpl.h */
 #define PetscCheckSameType(a, arga, b, argb)                                   \
   $assert((a) && (b), "Error: Null pointer passed to PetscCheckSameType.");    \
   $assert((a)->type == (b)->type, "Error: Vectors have different types.")
 
-// Macro to check if two vectors have the same communicator
+/* PetscCheckSameComm - Macro to check if two vectors have the same communicator
+  - Extracted from petscimpl.h */
 #define PetscCheckSameComm(a, arga, b, argb)                                   \
   $assert((a) && (b), "Error: Null pointer passed to PetscCheckSameComm.");    \
   $assert((a)->comm == (b)->comm,                                              \
           "Error: Vectors have different communicators.")
 
+/* PetscCheckSameTypeAndComm - Macro to check if two objects have the same
+  type and communicator.
+  - Extracted from petscimpl.h */
 #define PetscCheckSameTypeAndComm(a, arga, b, argb)                            \
   do {                                                                         \
     PetscCheckSameType(a, arga, b, argb);                                      \
     PetscCheckSameComm(a, arga, b, argb);                                      \
   } while (0)
 
-// Macro to check if two vectors have the same global size or not
+/* VecCheckSameSize - Macro to verify that two vectors have the same global size
+  and are not null.
+  - Extracted from vecimpl.h */
 #define VecCheckSameSize(a, arga, b, argb)                                     \
   $assert((a) && (b), "Error: Null pointer passed to VecCheckSameSize.");      \
   $assert((a)->map->N == (b)->map->N,                                          \
@@ -649,13 +674,22 @@ PetscBool PetscIsNanReal(PetscReal a);
   - x The vector to lock for reading.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
-*/
+  - Extracted from rvector.c */
 #define VecLockReadPush(x)                                                     \
   do {                                                                         \
     $assert((x) != NULL, "VecLockReadPush: Vector pointer is NULL.");          \
     (x)->read_lock_count++;                                                    \
   } while (0)
 
+/*
+  VecLockReadPop - Pops a read-only lock from a vector, decreasing its read lock
+  count.
+
+  Parameters:
+  - x The vector to unlock for reading.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscvec.h */
 #define VecLockReadPop(x)                                                      \
   do {                                                                         \
     $assert((x) != NULL, "VecLockReadPop: Vector pointer is NULL.");           \
@@ -670,6 +704,21 @@ PetscBool PetscIsNanReal(PetscReal a);
 
 #define PetscObjectQueryFunction(obj, name, fptr) ((void)0)
 
+/*
+  VecMethodDispatch - Dispatches a method call for a vector object, optionally
+  using an asynchronous method if a dispatch context is provided.
+
+  Parameters:
+  - v: The vector object.
+  - dctx: The dispatch context (can be NULL).
+  - async_name: The name of the asynchronous method to query.
+  - name: The name of the synchronous method to use as fallback.
+  - async_arg_types: The argument types for the asynchronous method.
+  - ...: Additional arguments to pass to the method.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from vecimpl.h
+*/
 #define VecMethodDispatch(v, dctx, async_name, name, async_arg_types, ...)     \
   do {                                                                         \
     PetscErrorCode(*_8_f) async_arg_types = NULL;                              \
@@ -683,8 +732,21 @@ PetscBool PetscIsNanReal(PetscReal a);
     }                                                                          \
   } while (0)
 
+// Define MPIU_REAL as MPI_DOUBLE for real number communication in MPI
 #define MPIU_REAL MPI_DOUBLE
 
+/*
+  PetscValidLogicalCollectiveScalar - Validates that a scalar value is logically
+  collective and consistent across all processes in a communicator.
+
+  Parameters:
+  - a The PetscObject (e.g., Vec, Mat) associated with the communicator.
+  - b The scalar value to validate.
+  - arg The argument position of the scalar value in the calling function.
+
+  Returns: None (throws an error if validation fails).
+  - Extracted from petscimpl.h
+*/
 #define PetscValidLogicalCollectiveScalar(a, b, arg)                           \
   do {                                                                         \
     PetscScalar b0 = (b);                                                      \
@@ -707,6 +769,16 @@ PetscBool PetscIsNanReal(PetscReal a);
                arg);                                                           \
   } while (0)
 
+/*
+  VecCheckSameLocalSize - Checks if two vectors have the same local size.
+
+  Parameters:
+  - x, ar1: The first vector and its parameter number.
+  - y, ar2: The second vector and its parameter number.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from vecimpl.h
+*/
 #define VecCheckSameLocalSize(x, ar1, y, ar2)                                  \
   do {                                                                         \
     PetscCheck(                                                                \
@@ -716,6 +788,14 @@ PetscBool PetscIsNanReal(PetscReal a);
         ar1, (x)->map->n, ar2, (y)->map->n);                                   \
   } while (0)
 
+/*PetscFree - Frees allocated memory and sets the pointer to NULL.
+
+  Parameters:
+  - a The pointer to the memory to be freed.
+
+  Returns: 0 if the pointer is NULL, otherwise frees the memory and sets the
+  pointer to NULL.
+  - Extracted from petscsys.h */
 #define PetscFree(a)                                                           \
   do {                                                                         \
     if (!(a))                                                                  \
@@ -724,42 +804,39 @@ PetscBool PetscIsNanReal(PetscReal a);
     (a) = NULL;                                                                \
   } while (0)
 
-#define VecNorm_SeqFn(a, b, c) VecNorm_Seq(a, b, c)
+/*VecMax_Seq_GT - Compares two PetscReal values and returns 1 if the first is
+  greater than the second, otherwise returns 0.
 
+  Parameters:
+  - l The first PetscReal value.
+  - r The second PetscReal value.
+
+  Returns: int (1 if l > r, 0 otherwise).
+  - Extracted from dvec2.c */
 static int VecMax_Seq_GT(PetscReal l, PetscReal r) { return (l > r) ? 1 : 0; }
 
+/*VecMin_Seq_LT - Compares two PetscReal values and returns 1 if the first is
+  less than the second, otherwise returns 0.
+
+  Parameters:
+  - l The first PetscReal value.
+  - r The second PetscReal value.
+
+  Returns: int (1 if l < r, 0 otherwise).
+  - Extracted from dvec2.c */
 static int VecMin_Seq_LT(PetscReal l, PetscReal r) { return (l < r) ? 1 : 0; }
 
-#ifndef MPI_IN_PLACE
-#define MPI_IN_PLACE (void *)-1
-#endif
-
+// MPIU_SUM: Alias for MPI_SUM, used for summation in MPI operations.
 #define MPIU_SUM MPI_SUM
 
+// MPIU_SCALAR: Alias for MPIU_REAL, representing scalar values in MPI.
 #define MPIU_SCALAR MPIU_REAL
 
+// PetscMax(a, b): Macro to compute the maximum of two values.
 #define PetscMax(a, b) (((a) < (b)) ? (b) : (a))
 
-#define PetscDesignatedInitializer(name, ...) .name = __VA_ARGS__
-
-#ifdef USE_VEC_MTDOT
-#define VecXDot_SeqFn(a, b, c) VecXDot_Seq_Private(a, b, c, BLASdotu_)
-#endif
-
-#define BLASfn(a, b, c, d, e) BLASdot_(a, b, c, d, e)
-
-#ifdef USE_VEC_TDOT
-/*
-  pay close attention!!! a and b are SWAPPED here so that the eventual
-  BLAS call is dot(&bn, xa, &one, ya, &one)
-*/
-#define VecXDot_SeqFn(a, b, c) VecXDot_Seq_Private(b, a, c, BLASdotu_)
-#undef BLASfn
-#define BLASfn(a, b, c, d, e) BLASdotu_(a, b, c, d, e)
-#endif
-
-#define PETSC_HAVE_MPIUNI 0
-
+// Disabling Fortran kernel and pragma-related macros as they are not being used
+// or verified
 #ifdef PETSC_USE_FORTRAN_KERNEL_AYPX
 #undef PETSC_USE_FORTRAN_KERNEL_AYPX
 #endif
@@ -768,24 +845,36 @@ static int VecMin_Seq_LT(PetscReal l, PetscReal r) { return (l < r) ? 1 : 0; }
 #undef PETSC_USE_FORTRAN_KERNEL_WAXPY
 #endif
 
+#define PETSC_HAVE_MPIUNI 0
+
 #ifdef PETSC_HAVE_PRAGMA_DISJOINT
 #undef PETSC_HAVE_PRAGMA_DISJOINT
 #endif
 
+// Define PETSC_RESTRICT macro to handle the restrict keyword for portability.
 #ifndef PETSC_RESTRICT
 #define PETSC_RESTRICT restrict
 #endif
 
+// Defines MPI and PETSc-related macros for data types and operations to
+// simplify usage in the code.
 #define MPIU_REAL_INT MPI_DOUBLE_INT
 #define MPIU_MAXLOC MPI_MAXLOC
 #define MPIU_MINLOC MPI_MINLOC
 #define MPIU_MAX MPI_MAX
 #define MPIU_MIN MPI_MIN
-
 #ifndef PETSC_MAX_INT
 #define PETSC_MAX_INT INT_MAX
 #endif
 
+/* PetscArrayzero - Sets all elements of an array to a scalar zero value.
+
+  Parameters:
+  - arr The array to be zeroed.
+  - cnt The number of elements in the array.
+
+  Returns: None (macro).
+  - Extracted from petscstring.h */
 #define PetscArrayzero(arr, cnt)                                               \
   do {                                                                         \
     size_t _i;                                                                 \
@@ -794,6 +883,8 @@ static int VecMin_Seq_LT(PetscReal l, PetscReal r) { return (l < r) ? 1 : 0; }
     }                                                                          \
   } while (0)
 
+/* Dependencies macros for VecAXPY function
+   - Extracted from petscaxpy.h */
 #define PetscKernelAXPY(U, a1, p1, n)                                          \
   do {                                                                         \
     const PetscInt _n = n;                                                     \
@@ -868,12 +959,47 @@ static int VecMin_Seq_LT(PetscReal l, PetscReal r) { return (l < r) ? 1 : 0; }
     }                                                                          \
   } while (0)
 
+/* PetscIsNanScalar - Checks if a given scalar value is NaN (Not a Number).
+
+  Parameters:
+  - v The scalar value to check.
+
+  Returns: PetscBool (PETSC_TRUE if the value is NaN, PETSC_FALSE otherwise).
+  - Extracted from petscmath.h
+*/
 PetscBool PetscIsNanScalar(PetscScalar v);
 
+/* PetscEqualReal - Compares two real numbers for equality.
+
+  Parameters:
+  - a The first real number.
+  - b The second real number.
+
+  Returns: PetscBool (PETSC_TRUE if the numbers are equal, PETSC_FALSE
+  otherwise).
+  - Extracted from petscmath.h
+  - URL:
+  https://petsc.org/release/manualpages/Sys/PetscEqualReal/#petscequalreal
+*/
 PetscBool PetscEqualReal(PetscReal a, PetscReal b);
 
 /*
-  PetscObjectComm - Gets the MPI communicator for any `PetscObject`
+  Copies n bytes from location b to location a.
+  Parameters:
+  - a Destination pointer.
+  - b Source pointer.
+  - n Number of bytes to copy.
+
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: Returns an error code if either `a` or `b` is NULL.
+
+  - Extracted from petscstring.h
+  - URL: https://petsc.org/release/manualpages/Sys/PetscMemcpy/#petscmemcpy
+ */
+PetscErrorCode PetscMemcpy(void *a, const void *b, size_t n);
+
+/* PetscObjectComm - Gets the MPI communicator for any `PetscObject`
   regardless of the type. Parameters:
   - obj Any PETSc object, for example a `Vec`, `Mat`, or `KSP`. It must
   be cast to a (`PetscObject`), for example,
@@ -886,6 +1012,9 @@ PetscBool PetscEqualReal(PetscReal a, PetscReal b);
     This function returns the MPI communicator associated with the PETSc
   object `obj`. If `obj` is `NULL` or invalid, it returns
   `MPI_COMM_NULL`.
+  - Extracted from gcomm.c
+  - URL:
+  https://petsc.org/release/manualpages/Sys/PetscObjectComm/#petscobjectcomm
 */
 MPI_Comm PetscObjectComm(PetscObject obj);
 
@@ -898,7 +1027,9 @@ MPI_Comm PetscObjectComm(PetscObject obj);
   - help Optional help string; may be NULL.
 
   Returns: PetscErrorCode (Always returns 0 in this implementation).
- */
+  - Extracted from petscsys.h
+  - URL:
+  https://petsc.org/release/manualpages/Sys/PetscInitialize/#petscinitialize */
 PetscErrorCode PetscInitialize(int *argc, char ***args, const char file[],
                                const char help[]);
 
@@ -912,7 +1043,10 @@ PetscErrorCode PetscInitialize(int *argc, char ***args, const char file[],
   - set Pointer to a boolean indicating if the option was set.
 
   Returns: PetscErrorCode (Always returns 0 in this implementation).
- */
+  - Extracted from petscoptions.h
+  - URL:
+  https://petsc.org/release/manualpages/Sys/PetscOptionsGetInt/#petscoptionsgetint
+*/
 PetscErrorCode PetscOptionsGetInt(PetscOptions options, const char pre[],
                                   const char name[], PetscInt *ivalue,
                                   PetscBool *set);
@@ -927,6 +1061,8 @@ PetscErrorCode PetscOptionsGetInt(PetscOptions options, const char pre[],
 
   Note: Allocates memory for the Vec structure and its internal SimpleMap.
         Initializes fields to default values.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecCreate/#veccreate
  */
 PetscErrorCode VecCreate(MPI_Comm comm, Vec *vec);
 
@@ -936,6 +1072,8 @@ PetscErrorCode VecCreate(MPI_Comm comm, Vec *vec);
   - v1 Input real number.
 
   Returns: The absolute value of v1.
+  - Extracted from petscmath.h
+  - URL: https://petsc.org/release/manualpages/Sys/PetscAbsReal/#petscabsreal
  */
 PetscReal PetscAbsReal(PetscReal v1);
 
@@ -948,6 +1086,9 @@ PetscReal PetscAbsReal(PetscReal v1);
   Returns: PetscErrorCode (0 on success, 1 if out of range).
 
   Note: Checks for negative values and overflow before casting.
+  - Extracted from petscsys.h
+  - URL:
+  https://petsc.org/release/manualpages/Sys/PetscBLASIntCast/#petscblasintcast
  */
 PetscErrorCode PetscBLASIntCast(PetscInt a, PetscBLASInt *b);
 
@@ -960,6 +1101,9 @@ PetscErrorCode PetscBLASIntCast(PetscInt a, PetscBLASInt *b);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Allocates memory for the new vector and copies size information.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecDuplicate/#vecduplicate
  */
 PetscErrorCode VecDuplicate(Vec v, Vec *newv);
 
@@ -973,6 +1117,9 @@ PetscErrorCode VecDuplicate(Vec v, Vec *newv);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Creates m new vectors by calling VecDuplicate m times.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecDuplicateVecs/#vecduplicatevecs
  */
 PetscErrorCode VecDuplicateVecs(Vec v, PetscInt m, Vec *V[]);
 
@@ -985,6 +1132,9 @@ PetscErrorCode VecDuplicateVecs(Vec v, PetscInt m, Vec *V[]);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Calls VecDestroy on each vector and frees the array.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecDestroyVecs/#vecdestroyvecs
  */
 PetscErrorCode VecDestroyVecs(PetscInt m, Vec *vv[]);
 
@@ -1003,6 +1153,9 @@ PetscErrorCode VecDestroyVecs(PetscInt m, Vec *vv[]);
   Note: The ownership range refers to the portion of the vector owned by the
   current process in a parallel computation. The range is of the form [low,
   high), meaning that 'low' is inclusive and 'high' is exclusive.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecGetOwnershipRange/#vecgetownershiprange
  */
 PetscErrorCode VecGetOwnershipRange(Vec x, PetscInt *low, PetscInt *high);
 
@@ -1022,9 +1175,31 @@ PetscErrorCode VecGetOwnershipRange(Vec x, PetscInt *low, PetscInt *high);
   each process's ownership of the vector. The last element of the array is one
   past the end of the vector, so the range for process `p` is [ranges[p],
   ranges[p+1]).
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecGetOwnershipRanges/#vecgetownershipranges
  */
 PetscErrorCode VecGetOwnershipRanges(Vec x, const PetscInt *ranges[]);
 
+/*
+  Splits the ownership of a global size across processes in an MPI communicator.
+
+  Parameters:
+  - comm: The MPI communicator.
+  - n: Pointer to the local size (input/output). If input is PETSC_DECIDE, it is
+  computed.
+  - N: Pointer to the global size (input/output). If input is PETSC_DECIDE, it
+  is computed.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function ensures that the sum of all local sizes equals the global
+  size.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Sys/PetscSplitOwnership/#petscsplitownership
+ */
 PetscErrorCode PetscSplitOwnership(MPI_Comm comm, PetscInt *n, PetscInt *N);
 /*
   Sets the local and global sizes of a vector.
@@ -1036,6 +1211,8 @@ PetscErrorCode PetscSplitOwnership(MPI_Comm comm, PetscInt *n, PetscInt *N);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Sets the local and global sizes in the vector's map.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecSetSizes/#vecsetsizes
  */
 PetscErrorCode VecSetSizes(Vec v, PetscInt n, PetscInt N);
 
@@ -1049,6 +1226,8 @@ PetscErrorCode VecSetSizes(Vec v, PetscInt n, PetscInt N);
 
   Note: If the vector type is not set, it is initialized based on the number of
   processes.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecSetUp/#vecsetup
 */
 PetscErrorCode VecSetUp(Vec v);
 
@@ -1066,6 +1245,9 @@ PetscErrorCode VecSetUp(Vec v);
   Note: Converts `X` to `$vec`, extracts the required subsequence using
   `$vec_subseq`, and converts the result back to a PETSc `Vec` using
   `civlToPetscVecCopy`.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecGetSubVector/#vecgetsubvector
  */
 PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y);
 
@@ -1081,6 +1263,9 @@ PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y);
 
   Note: If the subvector's state has not changed, this function simply destroys
   it.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecRestoreSubVector/#vecrestoresubvector
  */
 PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y);
 
@@ -1094,6 +1279,8 @@ PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y);
 
   Note: This function frees the allocated memory for index sets, including
         local and nonlocal arrays.
+  - Extracted from petsccis.h
+  - URL: https://petsc.org/release/manualpages/IS/ISDestroy/#isdestroy
  */
 PetscErrorCode ISDestroy(IS *is);
 
@@ -1104,6 +1291,9 @@ PetscErrorCode ISDestroy(IS *is);
   - bs Block size to set.
 
   Returns: PetscErrorCode (Always returns 0 in this implementation).
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecSetBlockSize/#vecsetblocksize
  */
 PetscErrorCode VecSetBlockSize(Vec v, PetscInt bs);
 
@@ -1115,11 +1305,45 @@ PetscErrorCode VecSetBlockSize(Vec v, PetscInt bs);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Allocates memory for vector data based on the local size.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecSetFromOptions/#vecsetfromoptions
  */
 PetscErrorCode VecSetFromOptions(Vec vec);
 
+/*
+  Sets the type of a PETSc vector.
+
+  Parameters:
+  - vec: The PETSc vector whose type is to be set.
+  - newType: The type to set for the vector.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: The type determines the internal implementation of the vector.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecSetType/#vecsettype
+ */
 PetscErrorCode VecSetType(Vec vec, VecType newType);
 
+/*
+  Retrieves the type of a PETSc vector.
+
+  Parameters:
+  - vec: The PETSc vector whose type is to be retrieved.
+  - type: Pointer to a variable to store the type of the vector.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: The type of the vector determines its implementation, such as
+  standard, MPI, or other specialized types.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecGetType/#vecgettype
+ */
 PetscErrorCode VecGetType(Vec vec, VecType *type);
 
 /*
@@ -1129,8 +1353,28 @@ PetscErrorCode VecGetType(Vec vec, VecType *type);
   - alpha Scalar value to set.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecSet/#vecset
  */
 PetscErrorCode VecSet(Vec x, PetscScalar alpha);
+
+/*
+  Internal auxiliary function for VecSet to set all elements of a sequential
+  vector to a specified scalar value on a single process.
+
+  Parameters:
+  - xin: The input vector to be modified.
+  - alpha: The scalar value to set for all elements of the vector.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors and is not intended
+  for parallel use.
+  - Extracted from dvecimpl.h
+ */
+PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha);
 
 /*
   Displays the vector.
@@ -1141,6 +1385,9 @@ PetscErrorCode VecSet(Vec x, PetscScalar alpha);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Prints vector contents to stdout in simplified version.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecView/#vecview
  */
 PetscErrorCode VecView(Vec vec, PetscViewer viewer);
 
@@ -1150,6 +1397,9 @@ PetscErrorCode VecView(Vec vec, PetscViewer viewer);
   - n Number of flops to add.
 
   Returns: PetscErrorCode (0 on success, 1 if n is negative).
+  - Extracted from petsclog.h
+  - URL:
+  https://petsc.org/release/manualpages/Log/PetscLogFlops/#petsclogflops
  */
 PetscErrorCode PetscLogFlops(PetscLogDouble n);
 
@@ -1160,11 +1410,44 @@ PetscErrorCode PetscLogFlops(PetscLogDouble n);
   - y Second vector.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecSwap/#vecswap
  */
 PetscErrorCode VecSwap(Vec x, Vec y);
 
+/*
+  Internal auxiliary function for VecDot to compute the dot product of two
+  sequential vectors on a single process.
+
+  Parameters:
+  - xin: The first input vector.
+  - yin: The second input vector.
+  - z: Pointer to store the resulting dot product.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors and is not intended
+  for parallel use.
+  - Extracted from dvecimpl.h
+ */
 PetscErrorCode VecDot_Seq(Vec xin, Vec yin, PetscScalar *z);
 
+/*
+  Computes the dot product of two parallel vectors in an MPI environment.
+
+  Parameters:
+  - xin: The first input vector.
+  - yin: The second input vector.
+  - z: Pointer to store the resulting dot product.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for parallel vectors and utilizes MPI
+  communication to compute the global dot product.
+  - Extracted from pvecimpl.h
+ */
 PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscScalar *z);
 
 /*
@@ -1177,21 +1460,28 @@ PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscScalar *z);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: In complex mode, val = x · y' where y' is the conjugate transpose of y.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecDot/#vecdot
  */
 PetscErrorCode VecDot(Vec x, Vec y, PetscScalar *val);
 
+/*
+  Computes the real part of the dot product of two vectors.
+
+  Parameters:
+  - x: The first vector.
+  - y: The second vector.
+  - val: Pointer to store the real part of the dot product.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is intended for use with real-valued vectors.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecDotRealPart/#vecdotrealpart
+ */
 PetscErrorCode VecDotRealPart(Vec x, Vec y, PetscReal *val);
-
-PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val);
-
-PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscScalar *z);
-
-PetscErrorCode VecTDot_Seq(Vec x, Vec y, PetscScalar *val);
-
-PetscErrorCode VecMXDot_Private(
-    Vec x, PetscInt nv, const Vec y[], PetscScalar result[],
-    PetscErrorCode (*mxdot)(Vec, PetscInt, const Vec[], PetscScalar[]),
-    PetscLogEvent event);
 
 /*
   VecMTDot - Computes indefinite vector multiple dot products, i.e.,
@@ -1214,12 +1504,115 @@ PetscErrorCode VecMXDot_Private(
   Note: This is a stub for demonstration and verification. It does not
   perform any parallel reductions, nor check MPI ranks. In a realistic
   PETSc implementation, you would gather partial sums from each rank.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecTDot/#vectdot
+*/
+PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val);
+
+/*
+  Internal auxiliary function for VecTDot to computet the transpose dot product
+  of two parallel vectors in an MPI environment.
+
+  Parameters:
+  - xin: The first input vector.
+  - yin: The second input vector.
+  - z: Pointer to store the resulting transpose dot product.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for parallel vectors and utilizes MPI
+  communication to compute the global transpose dot product.
+  - Extracted from pvecimpl.h
+ */
+PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscScalar *z);
+
+/*
+  Internal auxiliary function for VecTDot to compute the transpose dot product
+  of two sequential vectors on a single process.
+  Parameters:
+  - xin: The first input vector.
+  - yin: The second input vector.
+  - z: Pointer to store the resulting transpose dot product.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors to compute the global
+  transpose dot product.
+  - Extracted from dvecimpl.h
+ */
+PetscErrorCode VecTDot_Seq(Vec xin, Vec yin, PetscScalar *z);
+
+// Internal Auxilary function used in VecMTDot
+PetscErrorCode VecMXDot_Private(
+    Vec x, PetscInt nv, const Vec y[], PetscScalar result[],
+    PetscErrorCode (*mxdot)(Vec, PetscInt, const Vec[], PetscScalar[]),
+    PetscLogEvent event);
+
+/*
+  VecMTDot - Computes multiple indefinite vector dot products, i.e.,
+
+    val[i] = sum_{k=0..n-1}( x[k] * y[i][k] ),
+
+  with NO complex conjugation. For complex vectors, the "transpose" is used,
+  not the "conjugate transpose."
+
+  Collective
+
+  Input Parameters:
+  + x   - one vector
+  . nv  - number of vectors
+  - y   - array of vectors
+
+  Output Parameter:
+  . val - array of dot products (length nv)
+
+  Note: This is a stub for demonstration and verification. It does not
+  perform any parallel reductions, nor check MPI ranks. In a realistic
+  PETSc implementation, you would gather partial sums from each rank.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecMTDot/#vecmtdot
 */
 PetscErrorCode VecMTDot(Vec x, PetscInt nv, const Vec y[], PetscScalar val[]);
 
+/*
+  Internal auxiliary function for VecMTDot to compute multiple transpose dot
+  products of parallel vectors in an MPI environment.
+
+  Parameters:
+  - xin: The input vector.
+  - nv: The number of vectors.
+  - y: Array of input vectors.
+  - z: Pointer to store the resulting transpose dot products (length nv).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for parallel vectors and utilizes MPI
+  communication to compute the global transpose dot products.
+  - Extracted from pvecimpl.h
+*/
 PetscErrorCode VecMTDot_MPI(Vec xin, PetscInt nv, const Vec y[],
                             PetscScalar *z);
 
+/*
+  Internal auxiliary function for VecMTDot to compute multiple transpose dot
+  products of sequential vectors on a single process.
+
+  Parameters:
+  - xin: The input vector.
+  - nv: The number of vectors.
+  - y: Array of input vectors.
+  - z: Pointer to store the resulting transpose dot products (length nv).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors to compute the global
+  transpose dot products.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec y[],
                             PetscScalar *z);
 
@@ -1235,6 +1628,8 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec y[],
 
   Note: In complex mode, val[i] = x · y[i]' where y[i]' is the conjugate of
   y[i].
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecMDot/#vecmdot
  */
 PetscErrorCode VecMDot(Vec x, PetscInt nv, const Vec y[], PetscScalar val[]);
 
@@ -1245,6 +1640,8 @@ PetscErrorCode VecMDot(Vec x, PetscInt nv, const Vec y[], PetscScalar val[]);
   - size Pointer to store the size.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecGetSize/#vecgetsize
  */
 PetscErrorCode VecGetSize(Vec x, PetscInt *size);
 
@@ -1255,52 +1652,124 @@ PetscErrorCode VecGetSize(Vec x, PetscInt *size);
   - size Pointer to store the local size.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecGetLocalSize/
  */
 PetscErrorCode VecGetLocalSize(Vec x, PetscInt *size);
 
 /*
-  Determines the vector component with maximum real part and its location.
+  Determines the vector component with the maximum real part and its location.
+
   Parameters:
-  - x Input vector.
-  - p Pointer to store the index of the maximum element.
-  - val Pointer to store the maximum value.
+  - x: Input vector.
+  - p: Pointer to store the index of the maximum element.
+  - val: Pointer to store the maximum value.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
-  Note: For complex vectors, considers the real part for comparison.
- */
+  Note: For complex vectors, it considers the real part for comparison.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecMax/#vecmax
+*/
 PetscErrorCode VecMax(Vec x, PetscInt *p, PetscReal *val);
 
+/*
+  Internal auxiliary function for VecMax to determine the maximum component
+  and its index for parallel vectors using MPI communication.
+
+  Parameters:
+  - xin: Input parallel vector.
+  - idx: Pointer to store the index of the maximum element.
+  - z: Pointer to store the maximum value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function uses MPI operations to identify the global maximum across
+  parallel processes.
+  - Extracted from pvecimpl.h
+*/
 PetscErrorCode VecMax_MPI(Vec xin, PetscInt *idx, PetscReal *z);
 
+/*
+  Internal auxiliary function for VecMax to determine the maximum component
+  and its index for sequential vectors on a single process.
+
+  Parameters:
+  - xin: Input sequential vector.
+  - idx: Pointer to store the index of the maximum element.
+  - z: Pointer to store the maximum value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecMax_Seq(Vec xin, PetscInt *idx, PetscReal *z);
 
 /*
   Determines the vector component with minimum real part and its location.
-  Parameters:
-  - x Input vector.
-  - p Pointer to store the index of the minimum element.
-  - val Pointer to store the minimum value.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - x: Input vector.
+  - p: Pointer to store the index of the minimum element.
+  - val: Pointer to store the minimum value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: For complex vectors, considers the real part for comparison.
- */
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecMin/#vecmin
+*/
 PetscErrorCode VecMin(Vec x, PetscInt *p, PetscReal *val);
 
+/*
+  Internal auxiliary function for VecMin to determine the minimum component
+  and its index for parallel vectors using MPI communication.
+
+  Parameters:
+  - xin: Input parallel vector.
+  - idx: Pointer to store the index of the minimum element.
+  - z: Pointer to store the minimum value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function uses MPI operations to identify the global minimum across
+  parallel processes.
+  - Extracted from pvecimpl.h
+*/
 PetscErrorCode VecMin_MPI(Vec xin, PetscInt *idx, PetscReal *z);
 
+/*
+  Internal auxiliary function for VecMin to determine the minimum component
+  and its index for sequential vectors on a single process.
+
+  Parameters:
+  - xin: Input sequential vector.
+  - idx: Pointer to store the index of the minimum element.
+  - z: Pointer to store the minimum value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecMin_Seq(Vec xin, PetscInt *idx, PetscReal *z);
 
 typedef struct _p_PetscDeviceContext *PetscDeviceContext;
 
+// Internal Auxilary function used in VecScale
 PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
                                      PetscDeviceContext dctx);
 
+// Internal Auxilary function used in VecSet
 PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha,
                                    PetscDeviceContext dctx);
-
-PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha);
 
 /*
   Scales a vector by multiplying each element by a scalar.
@@ -1311,9 +1780,26 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha);
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: Supports both real and complex scalars.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecScale/#vecscale
  */
 PetscErrorCode VecScale(Vec x, PetscScalar alpha);
 
+/*
+  Internal auxiliary function for VecScale to scale a sequential vector by a
+  scalar on a single process.
+
+  Parameters:
+  - xin: The input vector to be scaled.
+  - alpha: The scalar value by which to scale the vector.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors and is not intended
+  for parallel use.
+  - Extracted from dvecimpl.h
+ */
 PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha);
 
 /*
@@ -1329,9 +1815,12 @@ PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha);
   Note: This function checks if the vectors have the same dimensions and
   block size, and if their elements are equal. Supports both real and
   complex vectors.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecEqual/#vecequal
  */
 PetscErrorCode VecEqual(Vec vec1, Vec vec2, PetscBool *flg);
 
+// Internal Auxilary function used in VecMAXPY
 PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
                                      const PetscScalar alpha[], Vec x[],
                                      PetscDeviceContext dctx);
@@ -1339,127 +1828,278 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
 /*
   Computes y = y + sum(alpha[i] * x[i]) for multiple vectors. Updates the
   vector `y` by adding scaled versions of vectors `x[i]` weighted by
-  `alpha[i]` for each `i` in the range `[0, nv-1]`. Parameters:
-  - y Vector to be updated.
-  - nv Number of vectors.
-  - alpha Array of scalars.
-  - x Array of vectors.
+  `alpha[i]` for each `i` in the range `[0, nv-1]`.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - y: Vector to be updated.
+  - nv: Number of vectors.
+  - alpha: Array of scalars.
+  - x: Array of vectors.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: Supports both real and complex scalars and vectors.
- */
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecMAXPY/#vecmaxpy
+*/
 PetscErrorCode VecMAXPY(Vec y, PetscInt nv, const PetscScalar alpha[], Vec x[]);
 
+/*
+  Internal auxiliary function for VecMAXPY optimized for sequential vectors.
+  Performs the operation y = y + sum(alpha[i] * x[i]) without parallel
+  communication.
+
+  Parameters:
+  - xin: Vector to be updated.
+  - nv: Number of vectors.
+  - alpha: Array of scalars.
+  - y: Array of input vectors.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecMAXPY_Seq(Vec xin, PetscInt nv, const PetscScalar *alpha,
                             Vec *y);
 
+/*
+  Computes y = beta*y + sum(alpha[i] * x[i]) for multiple vectors. Updates the
+  vector `y` by scaling it with `beta` and adding scaled versions of vectors
+  `x[i]` weighted by `alpha[i]` for each `i` in the range `[0, nv-1]`.
+
+  Parameters:
+  - y: Vector to be updated.
+  - nv: Number of vectors.
+  - alpha: Array of scalars.
+  - beta: Scalar multiplier for vector y.
+  - x: Array of vectors.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Supports both real and complex scalars and vectors.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecMAXPBY/#vecmaxpby
+*/
 PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
                          PetscScalar beta, Vec x[]);
 
+// Internal Auxilary function used in VecAXPY
 PetscErrorCode VecAXPYAsync_Private(Vec y, PetscScalar alpha, Vec x,
                                     PetscDeviceContext dctx);
 
 /*
   Computes y = alpha * x + y. Updates the vector `y` by adding the vector
-  `x` scaled by the scalar `alpha`. Parameters:
-  - y Vector to be updated.
-  - alpha Scalar multiplier.
-  - x Vector to be added.
+  `x` scaled by the scalar `alpha`.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - y: Vector to be updated.
+  - alpha: Scalar multiplier.
+  - x: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: Supports both real and complex scalars and vectors.
- */
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecAXPY/#vecaxpy
+*/
 PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x);
 
+/*
+  Internal auxiliary function for VecAXPY optimized for sequential vectors.
+  Performs the operation y = alpha * x + y without parallel communication.
+
+  Parameters:
+  - yin: Vector to be updated.
+  - alpha: Scalar multiplier.
+  - xin: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecAXPY_Seq(Vec yin, PetscScalar alpha, Vec xin);
 
+// Internal Auxilary function used in VecAXPBY
 PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
                                      Vec x, PetscDeviceContext dctx);
 
 /*
   Computes the linear combination of two vectors `x` and `y`:
       y = alpha * x + beta * y
-  It iterates through the vectors with specified strides `sx` and `sy`
-  respectively. Parameters:
-  - alpha Scalar multiplier for the first vector `x`.
-  - x Pointer to the first vector.
-  - beta Scalar multiplier for the second vector `y`.
-  - y Pointer to the second vector.
 
-  Returns: This function updates the vector `y` in place.
+  Parameters:
+  - y: Vector to be updated.
+  - alpha: Scalar multiplier for vector `x`.
+  - beta: Scalar multiplier for vector `y`.
+  - x: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: This function performs element-wise operations and assumes that the
-  vectors are of the same length.
+  vectors are of the same length. Supports both real and complex scalars and
+  vectors.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecAXPBY/#vecaxpby
 */
 PetscErrorCode VecAXPBY(Vec y, PetscScalar alpha, PetscScalar beta, Vec x);
 
+/*
+  Internal auxiliary function for VecAXPBY optimized for sequential vectors.
+  Performs the operation y = a * x + b * y without parallel communication.
+
+  Parameters:
+  - yin: Vector to be updated.
+  - a: Scalar multiplier for vector `xin`.
+  - b: Scalar multiplier for vector `yin`.
+  - xin: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecAXPBY_Seq(Vec yin, PetscScalar a, PetscScalar b, Vec xin);
 
+// Internal Auxilary function used in VecAXPBYPCZ
 PetscErrorCode VecAXPBYPCZAsync_Private(Vec z, PetscScalar alpha,
                                         PetscScalar beta, PetscScalar gamma,
                                         Vec x, Vec y, PetscDeviceContext dctx);
 
 /*
   Computes the linear combination of three vectors `x`, `y`, and `z`:
-      w = alpha * x + beta * y + gamma * z
-  It iterates through the vectors with specified strides `sx`, `sy`, and `sz`
-  respectively. Parameters:
-  - alpha Scalar multiplier for the first vector `x`.
-  - x Pointer to the first vector.
-  - beta Scalar multiplier for the second vector `y`.
-  - y Pointer to the second vector.
-  - gamma Scalar multiplier for the third vector `z`.
-  - z Pointer to the third vector.
+      z = alpha * x + beta * y + gamma * z
 
-  Returns: This function updates the vector `z` in place.
+  Parameters:
+  - z: Vector to be updated.
+  - alpha: Scalar multiplier for vector `x`.
+  - beta: Scalar multiplier for vector `y`.
+  - gamma: Scalar multiplier for vector `z`.
+  - x: First vector to be added.
+  - y: Second vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: This function performs element-wise operations and assumes that the
-  vectors are of the same length.
+  vectors are of the same length. Supports both real and complex scalars and
+  vectors.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecAXPBYPCZ/#vecaxpbypcz
 */
 PetscErrorCode VecAXPBYPCZ(Vec z, PetscScalar alpha, PetscScalar beta,
                            PetscScalar gamma, Vec x, Vec y);
 
+/*
+  Internal auxiliary function for VecAXPBYPCZ optimized for sequential vectors.
+  Performs the operation z = alpha * x + beta * y + gamma * z without parallel
+  communication.
+
+  Parameters:
+  - zin: Vector to be updated.
+  - alpha: Scalar multiplier for vector `xin`.
+  - beta: Scalar multiplier for vector `yin`.
+  - gamma: Scalar multiplier for vector `zin`.
+  - xin: First vector to be added.
+  - yin: Second vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecAXPBYPCZ_Seq(Vec zin, PetscScalar alpha, PetscScalar beta,
                                PetscScalar gamma, Vec xin, Vec yin);
 
+// Internal Auxilary function used in VecAYPX
 PetscErrorCode VecAYPXAsync_Private(Vec y, PetscScalar beta, Vec x,
                                     PetscDeviceContext dctx);
 
 /*
   Computes y = x + beta * y. Updates the vector `y` by adding the vector `x` to
-  `y` scaled by the scalar `beta`. Parameters:
-  - y Vector to be updated.
-  - beta Scalar multiplier.
-  - x Vector to be added.
+  `y` scaled by the scalar `beta`.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - y: Vector to be updated.
+  - beta: Scalar multiplier for vector `y`.
+  - x: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: Supports both real and complex scalars and vectors.
- */
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecAYPX/#vecaypx
+*/
 PetscErrorCode VecAYPX(Vec y, PetscScalar beta, Vec x);
 
+/*
+  Internal auxiliary function for VecAYPX optimized for sequential vectors.
+  Performs the operation y = x + alpha * y without parallel communication.
+
+  Parameters:
+  - yin: Vector to be updated.
+  - alpha: Scalar multiplier for vector `yin`.
+  - xin: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecAYPX_Seq(Vec yin, PetscScalar alpha, Vec xin);
 
+// Internal Auxilary function used in VecWAXPY
 PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
                                      PetscDeviceContext dctx);
 
 /*
   Computes w = alpha * x + y. Stores the result in the vector `w` by adding
-  the vector `y` to `alpha` times the vector `x`. Parameters:
-  - w Vector to store the result.
-  - alpha Scalar multiplier for vector x.
-  - x Vector to be scaled and added.
-  - y Vector to be added.
+  the vector `y` to `alpha` times the vector `x`.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - w: Vector to store the result.
+  - alpha: Scalar multiplier for vector `x`.
+  - x: Vector to be scaled and added.
+  - y: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
 
   Note: Supports both real and complex scalars and vectors.
- */
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecWAXPY/#vecwaxpy
+*/
 PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y);
 
+/*
+  Internal auxiliary function for VecWAXPY optimized for sequential vectors.
+  Performs the operation w = alpha * x + y without parallel communication.
+
+  Parameters:
+  - win: Vector to store the result.
+  - alpha: Scalar multiplier for vector `xin`.
+  - xin: Vector to be scaled and added.
+  - yin: Vector to be added.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecWAXPY_Seq(Vec win, PetscScalar alpha, Vec xin, Vec yin);
+
 /*
   Computes the component-wise multiplication w[i] = x[i] * y[i]. This
   operation is performed for each element `i` of the vectors `x`, `y`.
@@ -1472,9 +2112,28 @@ PetscErrorCode VecWAXPY_Seq(Vec win, PetscScalar alpha, Vec xin, Vec yin);
 
   Note: Supports both real and complex numbers, where complex multiplication
   is performed element-wise.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecPointwiseMult/#vecpointwisemult
  */
 PetscErrorCode VecPointwiseMult(Vec w, Vec x, Vec y);
 
+/*
+  Internal auxiliary function to compute the maximum pointwise division of two
+  sequential vectors on a single process.
+
+  Parameters:
+  - xin: The first input vector.
+  - yin: The second input vector.
+  - max: Pointer to store the resulting maximum value of pointwise division.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is optimized for sequential vectors and is not intended
+  for parallel use.
+  - Extracted from dvecimpl.h
+ */
 PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max);
 /*
   Computes the maximum of the componentwise division max = max_i
@@ -1492,6 +2151,9 @@ PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max);
   - If `y[i]` is zero, it is treated as 1 for the computation.
   - Supports both real and complex numbers, where the magnitude of the
   division result is considered for complex numbers.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecMaxPointwiseDivide/#vecmaxpointwisedivide
  */
 PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max);
 
@@ -1506,6 +2168,9 @@ PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max);
 
   Note: Supports both real and complex numbers. Handles division by zero
   appropriately.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecPointwiseDivide/#vecpointwisedivide
  */
 PetscErrorCode VecPointwiseDivide(Vec w, Vec x, Vec y);
 
@@ -1518,6 +2183,9 @@ PetscErrorCode VecPointwiseDivide(Vec w, Vec x, Vec y);
 
   Note: Should be called after completing all calls to VecSetValues().
         Ensures all entries are stored on the correct MPI process.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecAssemblyBegin/#vecassemblybegin
  */
 PetscErrorCode VecAssemblyBegin(Vec vec);
 
@@ -1530,21 +2198,46 @@ PetscErrorCode VecAssemblyBegin(Vec vec);
 
   Note: Should be called after VecAssemblyBegin().
         Finalizes the assembly of the vector.
+    - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecAssemblyEnd/#vecassemblyend
  */
 PetscErrorCode VecAssemblyEnd(Vec vec);
 
+// Internal Auxilary function used in VecCopy
 PetscErrorCode VecCopyAsync_Private(Vec x, Vec y, PetscDeviceContext dctx);
 
 /*
   Copies one vector to another.
-  Parameters:
-  - xin Source vector.
-  - yin Destination vector.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
- */
+  Parameters:
+  - xin: Source vector.
+  - yin: Destination vector.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Supports both real and complex vectors.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecCopy/#veccopy
+*/
 PetscErrorCode VecCopy(Vec xin, Vec yin);
 
+/*
+  Internal auxiliary function for VecCopy optimized for sequential vectors.
+  Copies the contents of the source vector to the destination vector without
+  parallel communication.
+
+  Parameters:
+  - xin: Source vector.
+  - yin: Destination vector.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecCopy_Seq(Vec xin, Vec yin);
 
 /* Utility function to compute the PETSc norm of a CIVL vector */
@@ -1553,84 +2246,217 @@ void $petsc_norm($vec vec, NormType type, PetscReal *result);
 /* Returns string representation of the PETSc norm type */
 char *$petsc_norm_name(NormType type);
 
+/*
+  Internal auxiliary function for VecNorm optimized for sequential vectors.
+  Computes the norm of a sequential vector on a single process.
+
+  Parameters:
+  - xin: Input sequential vector.
+  - type: Type of norm to compute (e.g., NORM_1, NORM_2, NORM_FROBENIUS,
+  NORM_INFINITY, NORM_1_AND_2).
+  - z: Pointer to store the computed norm value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z);
 
+/*
+  Internal auxiliary function for VecNorm optimized for parallel vectors.
+  Computes the norm of a parallel vector using MPI communication.
+
+  Parameters:
+  - xin: Input parallel vector.
+  - type: Type of norm to compute (e.g., NORM_1, NORM_2, NORM_FROBENIUS,
+  NORM_INFINITY, NORM_1_AND_2).
+  - z: Pointer to store the computed norm value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Uses MPI operations to compute the global norm across parallel
+  processes.
+  - Extracted from pvecimpl.h
+*/
 PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscReal *z);
 
+/*
+  Computes the norm of a vector (sequential or parallel).
+
+  Parameters:
+  - x: Input vector.
+  - type: Type of norm to compute (e.g., NORM_1, NORM_2, NORM_FROBENIUS,
+  NORM_INFINITY, NORM_1_AND_2).
+  - val: Pointer to store the computed norm value.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Automatically handles both sequential and parallel vector cases.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecNorm/#vecnorm
+*/
 PetscErrorCode VecNorm(Vec x, NormType type, PetscReal *val);
 
+/*
+  Checks if the specified norm of a vector has already been computed and is
+  available.
+
+  Parameters:
+  - x: Input vector.
+  - type: Type of norm to check.
+  - available: Pointer to store the availability status (true or false).
+  - val: Pointer to store the previously computed norm value (if available).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Useful for avoiding redundant norm computations.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecNormAvailable/#vecnormavailable
+*/
 PetscErrorCode VecNormAvailable(Vec x, NormType type, PetscBool *available,
                                 PetscReal *val);
 
+/*
+  Normalizes a vector to have a specified norm, usually unit length.
+
+  Parameters:
+  - x: Vector to normalize.
+  - val: Pointer to store the original norm of the vector before normalization.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Typically used to scale vectors to unit length.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecNormalize/#vecnormalize
+*/
 PetscErrorCode VecNormalize(Vec x, PetscReal *val);
 
 /*
-  Computes the norm of a sequential vector.
-  Parameters:
-  - xin Input vector.
-  - type Type of norm to compute (NORM_1, NORM_2, NORM_INFINITY).
-  - z Pointer to store the computed norm value.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Note: NORM_FROBENIUS is same as L2 norm for vectors.
-        NORM_1_AND_2 returns both L1 & L2 norms at same time.
- */
-PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z);
-
-/*
   Gets a read-only pointer to the vector's data array.
-  Parameters:
-  - x Input vector.
-  - a Pointer to store the read-only array pointer.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
- */
+  Parameters:
+  - x: Input vector.
+  - a: Pointer to store the read-only array pointer.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Intended for accessing vector data without modification.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecGetArrayRead/#vecgetarrayread
+*/
 PetscErrorCode VecGetArrayRead(Vec x, const PetscScalar **a);
 
+/*
+  Gets a writable pointer to the vector's data array.
+
+  Parameters:
+  - x: Input vector.
+  - a: Pointer to store the writable array pointer.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Intended for modifying vector data directly.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecGetArrayWrite/#vecgetarraywrite
+*/
 PetscErrorCode VecGetArrayWrite(Vec x, PetscScalar **a);
 
 /*
   Gets a writable pointer to the vector's data array.
-  Parameters:
-  - x Input vector.
-  - a Pointer to store the writable array pointer.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
- */
+  Parameters:
+  - x: Input vector.
+  - a: Pointer to store the writable array pointer.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Provides writable access for direct manipulation of vector data.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecGetArray/#vecgetarray
+*/
 PetscErrorCode VecGetArray(Vec x, PetscScalar **a);
 
 /*
   Restores the read-only array obtained from VecGetArrayRead.
-  Parameters:
-  - x Input vector.
-  - a Pointer to the array to be restored.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
- */
+  Parameters:
+  - x: Input vector.
+  - a: Pointer to the array to be restored.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Should be called after finishing read-only access.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecRestoreArrayRead/#vecrestorearrayread
+*/
 PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar **a);
 
+/*
+  Restores the writable array obtained from VecGetArrayWrite.
+
+  Parameters:
+  - x: Input vector.
+  - a: Pointer to the array to be restored.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Should be called after finishing modifications.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecRestoreArrayWrite/#vecrestorearraywrite
+*/
 PetscErrorCode VecRestoreArrayWrite(Vec x, PetscScalar **a);
 
 /*
-  Restores the array obtained from VecGetArray.
-  Parameters:
-  - x Input vector.
-  - a Pointer to the array to be restored.
+  Restores the writable array obtained from VecGetArray.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
- */
+  Parameters:
+  - x: Input vector.
+  - a: Pointer to the array to be restored.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Should be called after finishing modifications.
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecRestoreArray/#vecrestorearray
+*/
 PetscErrorCode VecRestoreArray(Vec x, PetscScalar **a);
 
 /*
-  Sets a single entry in a vector.
-  Parameters:
-  - v Vector to modify.
-  - row Index of the entry to set.
-  - value Value to set.
-  - mode Insertion mode (INSERT_VALUES or ADD_VALUES).
+  Sets a single entry in a PETSc vector.
 
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - v: The PETSc vector to modify.
+  - i: The global index of the entry to set.
+  - va: The value to set at the specified index.
+  - mode: The insertion mode, either INSERT_VALUES or ADD_VALUES.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is typically used to assemble vectors in parallel. The
+  insertion mode determines whether the value replaces the existing value
+  (INSERT_VALUES) or is added to it (ADD_VALUES).
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecSetValue/#vecsetvalue
  */
 PetscErrorCode VecSetValue(Vec v, PetscInt i, PetscScalar va, InsertMode mode);
 
@@ -1650,13 +2476,51 @@ PetscErrorCode VecSetValue(Vec v, PetscInt i, PetscScalar va, InsertMode mode);
   Note: The function either inserts or adds values at specified locations in the
   vector. This operation is often used when assembling vectors in parallel
   computations.
- */
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecSetValues/#vecsetvalues
+*/
 PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             const PetscScalar y[], InsertMode iora);
 
+/*
+  Internal auxiliary function for VecSetValues optimized for parallel vectors.
+  Inserts or adds values into a parallel PETSc vector at specified indices using
+  MPI communication.
+
+  Parameters:
+  - xin: Input parallel vector.
+  - ni: Number of indices for insertion.
+  - ix: Array of indices for insertion.
+  - y: Array of values to be inserted.
+  - addv: The insertion mode (INSERT_VALUES or ADD_VALUES).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Uses MPI to manage insertion across distributed vector components.
+  - Extracted from pvecimpl.h
+*/
 PetscErrorCode VecSetValues_MPI(Vec xin, PetscInt ni, const PetscInt ix[],
                                 const PetscScalar y[], InsertMode addv);
 
+/*
+  Internal auxiliary function for VecSetValues optimized for sequential vectors.
+  Inserts or adds values into a sequential PETSc vector at specified indices
+  without parallel communication.
+
+  Parameters:
+  - x: Input sequential vector.
+  - ni: Number of indices for insertion.
+  - ix: Array of indices for insertion.
+  - y: Array of values to be inserted.
+  - iora: The insertion mode (INSERT_VALUES or ADD_VALUES).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecSetValues_Seq(Vec x, PetscInt ni, const PetscInt ix[],
                                 const PetscScalar y[], InsertMode iora);
 
@@ -1674,29 +2538,65 @@ PetscErrorCode VecSetValues_Seq(Vec x, PetscInt ni, const PetscInt ix[],
   - PetscErrorCode: 0 on success, non-zero on failure.
 
   Notes:
-  - Each block is a contiguous group of elements of size equal to the
-  vector's block size.
-  - The function updates the vector such that x[bs * ix[i] + j] = y[bs * i +
-  j], for j = 0, ..., bs-1, where bs is the block size of the vector.
+  - Each block is a contiguous group of elements of size equal to the vector's
+  block size.
+  - Updates the vector such that x[bs * ix[i] + j] = y[bs * i + j], for j = 0,
+  ..., bs-1, where bs is the block size.
   - Indices outside the range owned by the local process are ignored.
-  - Calls with INSERT_VALUES and ADD_VALUES cannot be mixed without
-    intervening calls to VecAssemblyBegin() and VecAssemblyEnd().
+  - Calls with INSERT_VALUES and ADD_VALUES cannot be mixed without intervening
+  calls to VecAssemblyBegin() and VecAssemblyEnd().
   - Negative indices in ix are ignored to facilitate handling of boundary
   conditions.
-
-  Usage:
-  This operation is particularly useful in parallel computations when
-  dealing with structured data such as blocks of matrix rows or other
-  grouped data structures.
- */
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecSetValuesBlocked/#vecsetvaluesblocked
+*/
 PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[],
                                    const PetscScalar y[], InsertMode iora);
 
-PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt ix[],
-                                   const PetscScalar y[], InsertMode iora);
+/*
+  Internal auxiliary function for VecSetValuesBlocked optimized for parallel
+  vectors. Inserts or adds blocks of values into a parallel PETSc vector using
+  MPI communication.
 
+  Parameters:
+  - x: Input parallel vector.
+  - ni: Number of blocks for insertion.
+  - ix: Array of block indices.
+  - y: Array of values to be inserted or added, in block format.
+  - iora: The insertion mode (INSERT_VALUES or ADD_VALUES).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Notes:
+  - Uses MPI to manage insertion across distributed vector components.
+  - Extracted from pvecimpl.h
+*/
+PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt ix[],
+                                       const PetscScalar y[], InsertMode iora);
+
+/*
+  Internal auxiliary function for VecSetValuesBlocked optimized for sequential
+  vectors. Inserts or adds blocks of values into a sequential PETSc vector
+  without parallel communication.
+
+  Parameters:
+  - x: Input sequential vector.
+  - ni: Number of blocks for insertion.
+  - ix: Array of block indices.
+  - y: Array of values to be inserted or added, in block format.
+  - iora: The insertion mode (INSERT_VALUES or ADD_VALUES).
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecSetValuesBlocked_Seq(Vec x, PetscInt ni, const PetscInt ix[],
                                        const PetscScalar y[], InsertMode iora);
+
 /*
   ISCreateGeneral - Creates an index set from an array of integers.
 
@@ -1711,10 +2611,29 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec x, PetscInt ni, const PetscInt ix[],
   Returns: PetscErrorCode (0 on success, non-zero on failure).
 
   Note: This function allocates and initializes an `IS` structure.
+  - Extracted from petscis.h
+  - URL:
+  https://petsc.org/release/manualpages/IS/ISCreateGeneral/#iscreategeneral
  */
 PetscErrorCode ISCreateGeneral(MPI_Comm comm, PetscInt n, const PetscInt idx[],
                                PetscCopyMode mode, IS *is);
 
+/*
+  Returns the global length of an index set.
+
+  Parameters:
+  - is: The index set.
+  - size: Pointer to store the global size of the index set.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: This function is not collective and can be called independently by each
+  process.
+  - Extracted from petscis.h
+  - URL:
+  https://petsc.org/release/manualpages/IS/ISGetSize/#isgetsize
+ */
 PetscErrorCode ISGetSize(IS is, PetscInt *size);
 /*
   Creates a data structure for an index set containing a list of evenly
@@ -1728,6 +2647,8 @@ PetscErrorCode ISGetSize(IS is, PetscInt *size);
   - is: the new index set.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscis.h
+  - URL: https://petsc.org/release/manualpages/IS/ISCreateStride/#iscreatestride
 */
 PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
                               PetscInt step, IS *is);
@@ -1742,6 +2663,9 @@ PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
 
   Output:
   - size: The local size.
+
+  - Extracted from petscis.h
+  - URL: https://petsc.org/release/manualpages/IS/ISGetLocalSize/#isgetlocalsize
   */
 PetscErrorCode ISGetLocalSize(IS is, PetscInt *size);
 
@@ -1761,6 +2685,9 @@ PetscErrorCode ISGetLocalSize(IS is, PetscInt *size);
   (pass NULL if not needed).
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+  - Extracted from petscvec.h
+  - URL:
+  https://petsc.org/release/manualpages/Vec/VecConcatenate/#vecconcatenate
  */
 PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]);
 
@@ -1777,27 +2704,66 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]);
   - PetscErrorCode: 0 on success, non-zero on failure.
 
   Notes:
-  - The function retrieves `y[i] = x[ix[i]]` for `i = 0,...,ni-1`.
-  - Indices outside the local range of the vector result in `y[i]` being set
-  to 0.
- */
+  - Retrieves y[i] = x[ix[i]] for i = 0,...,ni-1.
+  - Indices outside the local range of the vector result in y[i] being set to 0.
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecGetValues/#vecgetvalues
+*/
 PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             PetscScalar y[]);
 
+/*
+  Internal auxiliary function for VecGetValues optimized for parallel vectors.
+  Retrieves values from specified indices in a parallel PETSc vector using MPI
+  communication.
+
+  Parameters:
+  - xin: Input parallel vector.
+  - ni: Number of indices to retrieve.
+  - ix: Array of global indices.
+  - y: Array to store retrieved values.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Notes:
+  - Utilizes MPI to access and retrieve data from distributed vector components.
+  - Extracted from pvecimpl.h
+*/
 PetscErrorCode VecGetValues_MPI(Vec xin, PetscInt ni, const PetscInt ix[],
                                 PetscScalar y[]);
 
+/*
+  Internal auxiliary function for VecGetValues optimized for sequential vectors.
+  Retrieves values from specified indices in a sequential PETSc vector without
+  parallel communication.
+
+  Parameters:
+  - xin: Input sequential vector.
+  - ni: Number of indices to retrieve.
+  - ix: Array of indices.
+  - y: Array to store retrieved values.
+
+  Returns:
+  - PetscErrorCode: 0 on success, non-zero on failure.
+
+  Note: Optimized specifically for sequential vectors on a single process.
+  - Extracted from dvecimpl.h
+*/
 PetscErrorCode VecGetValues_Seq(Vec xin, PetscInt ni, const PetscInt ix[],
                                 PetscScalar y[]);
+
 /*
-Conjugates each element of the vector.
-Parameters:
-- xin Vector to be conjugated.
+  Conjugates each element of the given sequential vector.
 
-Returns: PetscErrorCode (0 on success, non-zero on failure).
+  Parameters:
+  - xin Vector to be conjugated.
 
-Note: Handles both complex and real vectors depending on the USE_COMPLEX
-macro.
+  Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  Note: Handles both complex and real vectors depending on the USE_COMPLEX
+  macro.
+  - Extracted from dvecimpl.h
 */
 PetscErrorCode VecConjugate_Seq(Vec xin);
 
@@ -1814,6 +2780,9 @@ PetscErrorCode VecConjugate_Seq(Vec xin);
 
   Note: NORM_FROBENIUS is same as L2 norm for vectors.
         NORM_1_AND_2 returns both L1 & L2 norms at same time.
+
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecStrideNorm/#vecstridenorm
  */
 PetscErrorCode VecStrideNorm(Vec v, PetscInt start, NormType ntype,
                              PetscReal *nrm);
@@ -1824,6 +2793,9 @@ PetscErrorCode VecStrideNorm(Vec v, PetscInt start, NormType ntype,
   - v Pointer to the vector to be destroyed.
 
   Returns: PetscErrorCode (0 on success, non-zero on failure).
+
+  - Extracted from petscvec.h
+  - URL: https://petsc.org/release/manualpages/Vec/VecDestroy/#vecdestroy
  */
 PetscErrorCode VecDestroy(Vec *v);
 
@@ -1831,8 +2803,32 @@ PetscErrorCode VecDestroy(Vec *v);
   Finalizes PETSc.
 
   Returns: PetscErrorCode (Always returns 0 in this implementation).
+  - Extracted from petscsys.h
+  - URL: https://petsc.org/release/manualpages/Sys/PetscFinalize/#petscfinalize
  */
 PetscErrorCode PetscFinalize(void);
+
+/*Blas routines*/
+/*
+  Computes the dot product of two vectors `x` and `y`:
+      result = sum(PetscConj(x[i]) * y[i])
+  It iterates through the vectors with specified strides `sx` and `sy`
+  respectively.
+
+  Parameters:
+  - n Pointer to the number of elements in the vectors.
+  - x Pointer to the first vector.
+  - sx Pointer to the stride between elements in the first vector.
+  - y Pointer to the second vector.
+  - sy Pointer to the stride between elements in the second vector.
+
+  Returns: PetscScalar The computed dot product.
+
+  Note: For complex numbers, it computes: sum(PetscConj(x[ix]) * y[iy])
+*/
+PetscScalar BLASdot_(const PetscBLASInt *n, const PetscScalar *x,
+                     const PetscBLASInt *sx, const PetscScalar *y,
+                     const PetscBLASInt *sy);
 
 /*
   Computes the Euclidean norm (L2 norm) of a vector.
@@ -1901,24 +2897,6 @@ Parameters:
 PetscErrorCode BLASaxpy_(const PetscBLASInt *n, const PetscScalar *alpha,
                          const PetscScalar *x, const PetscBLASInt *incx,
                          PetscScalar *y, const PetscBLASInt *incy);
-/*
-  Copies n bytes from location b to location a.
-  Parameters:
-  - a Destination pointer.
-  - b Source pointer.
-  - n Number of bytes to copy.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Note: Returns an error code if either `a` or `b` is NULL.
-
- */
-PetscErrorCode PetscMemcpy(void *a, const void *b, size_t n);
-
-void gather_data_mpi(PetscReal *localReals, PetscReal *localImags,
-                     int local_size, int N, PetscReal **globalReals,
-                     PetscReal **globalImags, MPI_Comm comm, int rank,
-                     int nproc);
 
 // CIVL-specific functions used to model PETSc concepts...
 
@@ -2005,29 +2983,6 @@ bool vec_eq_seq(Vec vec1, Vec vec2);
  */
 void vec_destroy_seq(Vec vec);
 
-/*Blas routines*/
-/*
-  Computes the dot product of two vectors `x` and `y`:
-      result = sum(PetscConj(x[i]) * y[i])
-  It iterates through the vectors with specified strides `sx` and `sy`
-  respectively.
-
-  Parameters:
-  - n Pointer to the number of elements in the vectors.
-  - x Pointer to the first vector.
-  - sx Pointer to the stride between elements in the first vector.
-  - y Pointer to the second vector.
-  - sy Pointer to the stride between elements in the second vector.
-
-  Returns: PetscScalar The computed dot product.
-
-  Note: For complex numbers, it computes: sum(PetscConj(x[ix]) * y[iy])
-*/
-PetscScalar BLASdot_(const PetscBLASInt *n, const PetscScalar *x,
-                     const PetscBLASInt *sx, const PetscScalar *y,
-                     const PetscBLASInt *sy);
-
-// Now that Vec is forward-declared, we can define VecOps
 typedef struct _VecOps *VecOps;
 
 struct _VecOps {
@@ -2066,95 +3021,6 @@ struct _VecOps {
   PetscErrorCode (*restorearray)(Vec, PetscScalar **); /* restore data array */
   PetscErrorCode (*restorearraywrite)(Vec, PetscScalar **);
   PetscErrorCode (*getarraywrite)(Vec, PetscScalar **);
-};
-
-// Helper that assigns MPI-version function pointers
-static inline void SetOps_MPI(Vec vec) {
-  vec->ops->norm = VecNorm_MPI;
-  vec->ops->maxpointwisedivide = VecMaxPointwiseDivide_Seq;
-  vec->ops->dot = VecDot_MPI;
-  vec->ops->max = VecMax_MPI;
-  vec->ops->min = VecMin_MPI;
-  vec->ops->tdot = VecTDot_MPI;
-  vec->ops->scale = VecScale_Seq;
-  vec->ops->restorearraywrite = VecRestoreArrayWrite;
-  vec->ops->getarraywrite = VecGetArrayWrite;
-  vec->ops->set = VecSet_Seq;
-  vec->ops->axpy = VecAXPY_Seq;
-  vec->ops->aypx = VecAYPX_Seq;
-  vec->ops->axpby = VecAXPBY_Seq;
-  vec->ops->axpbypcz = VecAXPBYPCZ_Seq;
-  vec->ops->waxpy = VecWAXPY_Seq;
-  vec->ops->copy = VecCopy_Seq;
-  vec->ops->mtdot = VecMTDot_MPI;
-  vec->ops->maxpy = VecMAXPY_Seq;
-  vec->ops->maxpby = NULL;
-
-  vec->ops->concatenate = NULL;
-  // vec->ops->getsubvector = NULL;
-  vec->ops->setvalues = VecSetValues_MPI;
-  vec->ops->setvaluesblocked = VecSetValuesBlocked_MPI;
-  vec->ops->getvalues = VecGetValues_MPI;
-}
-
-// Helper that assigns sequential-version function pointers
-static inline void SetOps_Seq(Vec vec) {
-  vec->ops->norm = VecNorm_Seq;
-  vec->ops->maxpointwisedivide = VecMaxPointwiseDivide_Seq;
-  vec->ops->dot = VecDot_Seq;
-  vec->ops->max = VecMax_Seq;
-  vec->ops->min = VecMin_Seq;
-  vec->ops->tdot = VecTDot_Seq;
-  vec->ops->scale = VecScale_Seq;
-  vec->ops->restorearraywrite = VecRestoreArrayWrite;
-  vec->ops->getarraywrite = VecGetArrayWrite;
-  vec->ops->set = VecSet_Seq;
-  vec->ops->axpy = VecAXPY_Seq;
-  vec->ops->aypx = VecAYPX_Seq;
-  vec->ops->axpby = VecAXPBY_Seq;
-  vec->ops->axpbypcz = VecAXPBYPCZ_Seq;
-  vec->ops->waxpy = VecWAXPY_Seq;
-  vec->ops->copy = VecCopy_Seq;
-  vec->ops->mtdot = VecMTDot_Seq;
-  vec->ops->maxpy = VecMAXPY_Seq;
-  vec->ops->maxpby = NULL;
-
-  vec->ops->concatenate = NULL;
-  // vec->ops->getsubvector = NULL;
-  vec->ops->setvalues = VecSetValues_Seq;
-  vec->ops->setvaluesblocked = VecSetValuesBlocked_Seq;
-  vec->ops->getvalues = VecGetValues_Seq;
-}
-
-// static struct _VecOps DvOps = {PetscDesignatedInitializer(norm,
-// VecNorm_MPI)};
-typedef struct _ISOps *_ISOps;
-
-struct _ISOps {
-  PetscErrorCode (*duplicate)(IS, IS *);
-  /*PetscErrorCode (*getindices)(IS, const PetscInt *[]);
-  PetscErrorCode (*restoreindices)(IS, const PetscInt *[]);
-  PetscErrorCode (*invertpermutation)(IS, PetscInt, IS *);
-  PetscErrorCode (*sort)(IS);
-  PetscErrorCode (*sortremovedups)(IS);
-  PetscErrorCode (*sorted)(IS, PetscBool *);
-  PetscErrorCode (*destroy)(IS);
-  PetscErrorCode (*view)(IS, PetscViewer);
-  PetscErrorCode (*load)(IS, PetscViewer);
-  PetscErrorCode (*copy)(IS, IS);
-  PetscErrorCode (*togeneral)(IS);
-  PetscErrorCode (*oncomm)(IS, MPI_Comm, PetscCopyMode, IS *);
-  PetscErrorCode (*setblocksize)(IS, PetscInt);
-  PetscErrorCode (*contiguous)(IS, PetscInt, PetscInt, PetscInt *, PetscBool *);
-  PetscErrorCode (*locate)(IS, PetscInt, PetscInt *);
-  PetscErrorCode (*sortedlocal)(IS, PetscBool *);
-  PetscErrorCode (*sortedglobal)(IS, PetscBool *);
-  PetscErrorCode (*uniquelocal)(IS, PetscBool *);
-  PetscErrorCode (*uniqueglobal)(IS, PetscBool *);
-  PetscErrorCode (*permlocal)(IS, PetscBool *);
-  PetscErrorCode (*permglobal)(IS, PetscBool *);
-  PetscErrorCode (*intervallocal)(IS, PetscBool *);
-  PetscErrorCode (*intervalglobal)(IS, PetscBool *);*/
 };
 
 #endif

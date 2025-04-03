@@ -2,6 +2,9 @@
 #undef VecTDot
 
 PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val) {
+#ifdef DEBUG
+  $print("Target VecTDot \n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 2);

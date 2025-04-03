@@ -1,7 +1,7 @@
 # Makefile for CIVL verification of function VecNorm
 ROOT = ../..
 include $(ROOT)/common.mk
-MODSR =  VecNorm_Seq_driver.cvl VecNorm_Seq.c $(VEC)/petscvec.c $(VEC)/civlvec.cvl
+MODSR =  VecNorm_Seq_driver.cvl VecNorm_Seq.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
 MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
 DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
@@ -9,7 +9,7 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecNorm_Seq=VecNorm_Seq_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: runbig
+all: runsmall
 
 runbig: ver1r ver1c
 

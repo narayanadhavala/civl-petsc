@@ -6,7 +6,6 @@ PetscErrorCode VecNormAvailable(Vec x, NormType type, PetscBool *available,
 
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
-
 #ifdef USE_COMPLEX
 $input CIVL_RTYPE A_Real[N], A_Imag[N];
 #else
@@ -29,11 +28,15 @@ int main(void) {
       value[i] = scalar_make(A_Real[i], A_Imag[i]);
 
     x = $vec_make_from_dense(N, value);
-    if (rank == 0)
-      $print("\nNo.of procs = ", size, ", N = ", N , ", Type = ", $petsc_norm_name(normType), "...\n");
+    $print("\nVecNormAvailable_driver: nprocs = ", size, ", N = ", N,
+           ", Type = ", $petsc_norm_name(normType), " ...");
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+#endif
   }
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  PetscBool before_avail, after_avail;
+  bool before_avail, after_avail;
   PetscReal actual[2] = {0.0, 0.0};
 
   MPI_Bcast(&normType, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -43,20 +46,29 @@ int main(void) {
   // Check if norm is available before computation
   PetscErrorCode err_before =
       VecNormAvailable(p_x, normType, &before_avail, actual);
-
+#ifdef DEBUG
+  $print("Before: NormType = ", normType,
+         ", Available = ", (bool)before_avail, ", Actual = ", actual,
+         "\n");
+#endif
   if (!(normType == NORM_1_AND_2))
     $assert(!before_avail, "Norm should not be available initially.");
 
   VecNorm(p_x, normType, actual);
 
   PetscErrorCode err_after =
-      VecNormAvailable_spec(p_x, normType, &after_avail, actual);
-
+      VecNormAvailable(p_x, normType, &after_avail, actual);
+#ifdef DEBUG
+  $print("After: NormType = ", normType,
+         ", Available = ", (bool)after_avail, ", Actual = ", actual, "\n");
+#endif
+  $assert(err_before == 0 && err_after == 0);
   if (!(normType == NORM_1_AND_2))
     $assert(after_avail, "Norm should be available after computation.");
-  $assert(err_before == 0 && err_after == 0);
-  
-  // Clean up
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   MPI_Finalize();
 }

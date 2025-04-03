@@ -1,20 +1,15 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecSetValues
-
 PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             const PetscScalar y[], InsertMode iora);
 
 $input int N_MIN, N_MAX, N;
 $assume(N_MIN <= N && N <= N_MAX);
-
 $input int ni, B, ix[ni]; // Number of indices to set
 #assume(0 <= B && B <= N);
 $assume(0 <= ni && ni <= B); // Assume ni is valid and within bounds
-$assume($forall (int j : 0..ni - 1)(0 <= ix[j] && ix[j] < N));
-$assume($forall (int j : 0..ni - 1) $forall (int k: 0..j - 1) ix[j] != ix[k]);
-
+$assume($forall(int j : 0..ni - 1)(0 <= ix[j] && ix[j] < N));
+$assume($forall(int j : 0..ni - 1) $forall(int k : 0..j - 1) ix[j] != ix[k]);
 $input CIVL_RTYPE Y_Real[ni], X_Real[N];
 #ifdef USE_COMPLEX
 $input CIVL_RTYPE Y_Imag[ni], X_Imag[N];
@@ -23,58 +18,59 @@ $input CIVL_RTYPE Y_Imag[ni], X_Imag[N];
 int main() {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size, iora;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
   $vec x = $vec_zero(N);
   STYPE y_values[ni];
+  for (int i = 0; i < ni; i++)
+    y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
 
   if (rank == 0) {
+    iora = $choose_int(3);
     STYPE x_values[N];
-
     for (int i = 0; i < N; i++)
       x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
-
-    for (int i = 0; i < ni; i++)
-      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
-
     x = $vec_make_from_dense(N, x_values);
-
-    $print("\nN = ", N, ", ni = ", ni, "\n");
-    $print("Array of values y: [");
+    $print("\nVecSetValues_driver: nproc = ", size, ", N = ", N, ", ni = ", ni,
+           ", iora = ", (InsertMode)iora, " ...");
+#ifdef DEBUG
+    $print("\nArray of values y: [");
     for (int i = 0; i < ni; i++) {
       scalar_print(y_values[i]);
-      if (i < (ni - 1)) $print(", ");
+      if (i < (ni - 1))
+        $print(", ");
     }
     $print("] at Indices ix: [");
     for (int i = 0; i < ni; i++) {
       $print(ix[i]);
-      if (i < (ni - 1)) $print(", ");
+      if (i < (ni - 1))
+        $print(", ");
     }
     $print("]\nx: ");
     $vec_print(x);
+#endif
   }
-
+  MPI_Bcast(&iora, 1, MPI_INT, 0, MPI_COMM_WORLD);
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec expected = civlToPetscVec(x, PETSC_DECIDE, comm);
-
-  PetscErrorCode err_actual =
-      VecSetValues(p_x, ni, ix, y_values, INSERT_VALUES);
-  VecSetValues_spec(expected, ni, ix, y_values, INSERT_VALUES);
-
-  $assert(err_actual == 0);
-    if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-  }
+  VecSetValues_spec(expected, ni, ix, y_values, iora);
+  PetscErrorCode err_actual = VecSetValues(p_x, ni, ix, y_values, iora);
+  if (iora)
+    $assert(err_actual == 0);
+#ifdef DEBUG
   vecprint_mpi("Actual  ", p_x);
   vecprint_mpi("Expected", expected);
+#endif
   PetscBool flg;
   VecEqual(p_x, expected, &flg);
   $assert(flg, "Vector Value mismatch after VecSetValues.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&expected);
-
   MPI_Finalize();
 }

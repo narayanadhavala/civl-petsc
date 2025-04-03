@@ -1,7 +1,7 @@
 # Makefile for CIVL verification of function VecAYPX
 ROOT = ../..
 include $(ROOT)/common.mk
-MODSR =  VecAYPX_driver.cvl VecAYPX.c $(VEC)/petscvec.c $(VEC)/civlvec.cvl
+MODSR =  VecAYPX_driver.cvl VecAYPX.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
 MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
 DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
@@ -9,16 +9,13 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecAYPX=VecAYPX_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: runbig
+all: runsmall
 
 runbig: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
 
 runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
-
-VecAYPX.o: VecAYPX.c $(INC)/petscvec.h $(PETSC)
-	$(CC) $(TYPE) -DVecAYPX=VecAYPX_spec -I$(INC) -I$(PETSC) -c VecAYPX.c
 
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)

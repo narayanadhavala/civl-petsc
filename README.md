@@ -9,7 +9,6 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
 ├── examples
 │   ├── ex11.c
 │   ├── ex1.c
-│   ├── ex1.o
 │   └── Makefile
 ├── functions
 │   ├── VecAXPBY
@@ -49,7 +48,7 @@ This repository is being used to explore the application of CIVL to PETSc (Porta
     │       ├── civlcomplex.cvl
     │       ├── civlvec.cvl
     │       ├── Makefile
-    │       └── petscvec.c
+    │       └── petscvec.cvl
     └── test
         ├── civlcomplex_test.cvl
         ├── civlvec_test.cvl

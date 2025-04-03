@@ -1,6 +1,4 @@
 #include "petscvec.h"
-#include <mpi.h>
-#include <stdio.h>
 #undef VecAYPX
 PetscErrorCode VecAYPX(Vec y, PetscScalar beta, Vec x);
 
@@ -15,12 +13,13 @@ $input CIVL_RTYPE X_Imag[N], Y_Imag[N], beta_Imag;
 int main(void) {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
   // Vectors x and y
   $vec x = $vec_zero(N), y = $vec_zero(N);
 
-  STYPE x_values[N], y_values[N], beta; 
+  STYPE x_values[N], y_values[N], beta;
   beta = scalar_make(beta_Real, beta_Imag);
 
   if (rank == 0) {
@@ -32,10 +31,14 @@ int main(void) {
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
 
-    $print("\nN = ", N,"\nx: ");
+    $print("\nVecAYPX_driver: nprocs = ", size, ", N = ", N,
+           ", Beta = ", beta, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
     $print("\ny: ");
     $vec_print(y);
+#endif
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
@@ -44,21 +47,19 @@ int main(void) {
   VecAYPX_spec(expectedAYPX, beta, p_x);
   PetscErrorCode err_actual = VecAYPX(p_y, beta, p_x);
   $assert(err_actual == 0);
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
-  }
+#ifdef DEBUG
   vecprint_mpi("Actual   AYPX", p_y);
   vecprint_mpi("Expected AYPX", expectedAYPX);
-
+#endif
   bool flg;
   VecEqual(p_y, expectedAYPX, &flg);
-  $assert(flg,
-          "VecAYPX mismatch between actual and expected results.");
-
+  $assert(flg, "VecAYPX mismatch between actual and expected results.");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   VecDestroy(&expectedAYPX);
-
   MPI_Finalize();
 }

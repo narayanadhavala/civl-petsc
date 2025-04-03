@@ -3,6 +3,9 @@
 
 PetscErrorCode VecGetValues(Vec x, PetscInt ni, const PetscInt ix[],
                             PetscScalar y[]) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecGetValues: ni=", ni, "ix=", ix, "\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni)

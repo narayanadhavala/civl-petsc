@@ -7,6 +7,11 @@ static inline PetscScalar BLASdotu_(const PetscBLASInt *n, const PetscScalar *x,
                                     const PetscBLASInt *sy) {
   PetscScalar sum = scalar_zero;
   PetscInt i, j, k;
+
+#ifdef DEBUG
+  $print("Target BLASdotu n=", *n, "\n");
+#endif
+
   if (*sx == 1 && *sy == 1) {
     for (i = 0; i < *n; i++) {
       // sum += x[i] * y[i];
@@ -31,6 +36,10 @@ static PetscErrorCode VecXDot_Seq_Private(
   const PetscScalar *ya, *xa;
   PetscBLASInt bn;
 
+#ifdef DEBUG
+  $print("Target VecXDot_Seq_Private \n");
+#endif
+
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(n, &bn));
   if (n > 0)
@@ -47,6 +56,9 @@ static PetscErrorCode VecXDot_Seq_Private(
 }
 
 PetscErrorCode VecTDot_Seq(Vec xin, Vec yin, PetscScalar *z) {
+#ifdef DEBUG
+  $print("Target VecTDot_Seq \n");
+#endif
   PetscFunctionBegin;
   /*
     pay close attention!!! xin and yin are SWAPPED here so that the eventual

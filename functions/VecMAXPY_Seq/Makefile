@@ -1,7 +1,7 @@
 # Makefile for CIVL verification of function VecMAXPY_Seq
 ROOT = ../..
 include $(ROOT)/common.mk
-MODSR =  VecMAXPY_Seq_driver.cvl VecMAXPY_Seq.c $(VEC)/petscvec.c $(VEC)/civlvec.cvl
+MODSR =  VecMAXPY_Seq_driver.cvl VecMAXPY_Seq.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
 MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
 DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
@@ -9,16 +9,13 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecMAXPY_Seq=VecMAXPY_Seq_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: runbig
+all: runsmall
 
 runbig: ver1r ver1c
 
 runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
-
-VecMAXPY_Seq.o: VecMAXPY_Seq.c $(INC)/petscvec.h $(PETSC)
-	$(CC) $(TYPE) -DVecMAXPY_Seq=VecMAXPY_Seq_spec -I$(INC) -I$(PETSC) -c VecMAXPY_Seq.c
 
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)

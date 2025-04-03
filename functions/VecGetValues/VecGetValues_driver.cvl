@@ -22,7 +22,7 @@ $input CIVL_RTYPE X_Imag[N];
 int main() {
   MPI_Init(NULL, NULL);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank, chosen_proc, nprocs;
+  int rank, chosen_proc, nprocs, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &nprocs);
 
@@ -30,14 +30,15 @@ int main() {
 
   if (rank == 0) {
     STYPE x_values[N];
-
     for (int i = 0; i < N; i++)
       x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
-
     x = $vec_make_from_dense(N, x_values);
-
-    $print("N = ", N, "\nx: ");
+    $print("\nVecGetValues_driver: nprocs = ", nprocs, ", N = ", N,
+           ", ni =", ni, ", B =", B, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
+#endif
     chosen_proc = $choose_int(nprocs);
   }
 
@@ -49,30 +50,38 @@ int main() {
     int ix[ni];
     STYPE retrieved_values[ni], expected_values[ni];
     int elements_owned = ((p_x->map->rend) - (p_x->map->rstart));
-    $print("\n[Process ", chosen_proc, "] N = ", N, ", ni = ", ni, "\n");
-    for (int j = 0; j < ni; j++){
+    for (int j = 0; j < ni; j++)
       ix[j] = p_x->map->rstart + $choose_int(elements_owned);
-    }
-    $print("\nIndices ix: ");
+#ifdef DEBUG
+    $print("\n[Process ", chosen_proc, "] Indices ix: ");
     for (int j = 0; j < ni; j++) {
-      $print(ix[j], " ");
+      $print(ix[j]);
+      (j < ni - 1) ? $print(", ") : $print("\n");
     }
-
-    // Retrieve values using VecGetValues
+#endif
+    VecGetValues_spec(p_x, ni, ix, expected_values);
     PetscErrorCode err_actual = VecGetValues(p_x, ni, ix, retrieved_values);
     $assert(err_actual == 0);
-    VecGetValues(p_x, ni, ix, expected_values);
-
+#ifdef DEBUG
     $print("\nActual  : ");
-    for (int i = 0; i < ni; i++)
-      $print(retrieved_values[i], " ");
+    for (int i = 0; i < ni; i++) {
+      $print(retrieved_values[i]);
+      (i < ni - 1) ? $print(", ") : $print("");
+    }
     $print("\nExpected: ");
-    for (int i = 0; i < ni; i++)
-      $print(expected_values[i], " ");
+    for (int i = 0; i < ni; i++) {
+      $print(expected_values[i]);
+      (i < ni - 1) ? $print(", ") : $print("");
+    }
     $print("\n");
-    $assert($equals(&retrieved_values, &expected_values), "VecGetValues mismatch between actual and expected values.");
+#endif
+    $assert($equals(&retrieved_values, &expected_values),
+            "VecGetValues mismatch between actual and expected values.");
   }
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   MPI_Finalize();
 }

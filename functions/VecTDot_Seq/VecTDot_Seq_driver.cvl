@@ -29,26 +29,31 @@ int main(void) {
 
     x = $vec_make_from_dense(N, x_values);
     y = $vec_make_from_dense(N, y_values);
-    $print("\nNo.of procs = ", size, ", N = ", N, "\nx: ");
+    $print("\nVecTDot_Seq_driver: nprocs = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
     $vec_print(x);
     $print("\ny: ");
     $vec_print(y);
+#endif
   }
 
   Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
   Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  PetscErrorCode err_actual = VecTDot_Seq(p_x, p_y, &actual);
   VecTDot_Seq_spec(p_x, p_y, &expected);
+  PetscErrorCode err_actual = VecTDot_Seq(p_x, p_y, &actual);
 
   $assert(err_actual == 0);
-  if (rank == 0) {
-    $print("\n");
-    $pathCondition();
+#ifdef DEBUG
+  if (rank == 0)
     $print("\nActual  = ", actual, "\n\nExpected = ", expected, "\n");
-  }
+#endif
   $assert($equals(&actual, &expected),
           "VecTDot_Seq mismatch between actual and expected results.");
-
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
   VecDestroy(&p_x);
   VecDestroy(&p_y);
   MPI_Finalize();

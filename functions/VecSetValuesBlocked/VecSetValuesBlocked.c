@@ -3,6 +3,10 @@
 
 PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[],
                                    const PetscScalar y[], InsertMode iora) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecSetValuesBlocked ni = ", ni, ", iora = ", iora,
+         "\n");
+#endif
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni)

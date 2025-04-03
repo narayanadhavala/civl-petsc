@@ -3,6 +3,10 @@
 
 PetscErrorCode VecNormAvailable(Vec x, NormType type, PetscBool *available,
                                 PetscReal *val) {
+#ifdef DEBUG
+  $print("DEBUG: Target VecNormAvailable: normtype =", type,
+         ", Available =", available, ", val = ", val, "\n");
+#endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidType(x, 1);

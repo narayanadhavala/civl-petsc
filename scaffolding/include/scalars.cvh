@@ -7,6 +7,8 @@
 #include "civlcomplex.cvh"
 #define STYPE $complex
 #define scalar_zero $czero
+#define scalar_real(x) ((x).real)
+#define scalar_imag(x) ((x).imag)
 #define scalar_eq(x, y) $ceq(x, y)
 #define scalar_add(x, y) $cadd(x, y)
 #define scalar_mul(x, y) $cmul(x, y)
@@ -21,6 +23,8 @@
 #include <math.h>
 #define STYPE CIVL_RTYPE
 #define scalar_zero 0.0
+#define scalar_real(x) (x)
+#define scalar_imag(x) (0.0)
 #define scalar_eq(x, y) ((x) == (y))
 #define scalar_add(x, y) ((x) + (y))
 #define scalar_mul(x, y) ((x) * (y))

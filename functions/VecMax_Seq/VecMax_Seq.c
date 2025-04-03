@@ -3,7 +3,7 @@
 
 static PetscErrorCode VecMinMax_Seq(Vec xin, PetscInt *idx, PetscReal *z,
                                     PetscReal minmax,
-                                    int (cmp)(PetscReal, PetscReal)) {
+                                    int(cmp)(PetscReal, PetscReal)) {
   const PetscInt n = xin->map->n;
   PetscInt j = -1;
 

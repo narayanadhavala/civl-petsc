@@ -3,7 +3,7 @@
 
 PetscErrorCode VecDotRealPart(Vec x, Vec y, PetscReal *val) {
 #ifdef DEBUG
-  $print("Target VecDotRealPart: x=", x, ", y=", y, "\n");
+  $print("DEBUG: Target VecDotRealPart: x=", x, ", y=", y, "\n");
 #endif
   PetscScalar fdot;
 

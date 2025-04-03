@@ -1,7 +1,7 @@
 # Makefile for CIVL verification of function VecAXPY_Seq
 ROOT = ../..
 include $(ROOT)/common.mk
-MODSR =  VecAXPY_Seq_driver.cvl VecAXPY_Seq.c $(VEC)/petscvec.c $(VEC)/civlvec.cvl
+MODSR =  VecAXPY_Seq_driver.cvl VecAXPY_Seq.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
 MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
 DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
@@ -9,7 +9,7 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecAXPY_Seq=VecAXPY_Seq_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: runbig
+all: runsmall
 
 runbig: ver1r ver1c
 

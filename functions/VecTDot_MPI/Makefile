@@ -1,31 +1,65 @@
+# Makefile for CIVL verification of function VecTDot_MPI
 ROOT = ../..
 include $(ROOT)/common.mk
-INC = $(ROOT)/scaffolding/include
-SRC = $(ROOT)/scaffolding/src
-VEC = $(SRC)/vec
+MODSR =  VecTDot_MPI_driver.cvl VecTDot_MPI.c $(VEC)/petscvec.cvl $(VEC)/civlvec.cvl
+MODSC = $(MODSR) $(VEC)/civlcomplex.cvl 
+DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
+  $(INC)/civlvec.cvh
+VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
+  -DVecTDot_MPI=VecTDot_MPI_spec
+VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: verify_real verify_complex
+all: runsmall
 
-test_real: VecTDot_MPI_test.cvl $(VEC)/petscvec.c VecTDot_MPI.c
-	civl verify -input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -DVecTDot_MPI=VecTDot_MPI_spec -DUSE_VEC_TDOT -inputn=10 -sysIncludePath=$(INC) VecTDot_MPI_test.cvl $(VEC)/petscvec.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl VecTDot_MPI.c
+runbig: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
 
-test_complex: VecTDot_MPI_test.cvl $(VEC)/petscvec.c VecTDot_MPI.c
-	civl verify -input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -DVecTDot_MPI=VecTDot_MPI_spec -DUSE_VEC_TDOT -inputn=10 -DUSE_COMPLEX -DCIVL_COMPLEX -sysIncludePath=$(INC) VecTDot_MPI_test.cvl $(VEC)/petscvec.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl VecTDot_MPI.c
+runsmall: versmall
 
-verify_real: VecTDot_MPI_driver.cvl $(VEC)/petscvec.c VecTDot_MPI.c
-	civl verify -checkTermination=true $(if $(EXTRA_INPUTS),$(EXTRA_INPUTS),-input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -inputN_MIN=2 -inputN_MAX=2)\
-	 -DVecTDot_MPI=VecTDot_MPI_spec -DUSE_VEC_TDOT -sysIncludePath=$(INC) VecTDot_MPI_driver.cvl $(VEC)/petscvec.c\
-	  VecTDot_MPI.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
+# Note: add -DDEBUG to any command below to see lots of detail
 
-verify_complex: VecTDot_MPI_driver.cvl $(VEC)/petscvec.c VecTDot_MPI.c
-	civl verify -checkTermination=true $(if $(EXTRA_INPUTS),$(EXTRA_INPUTS),-input_mpi_nprocs_lo=2 -input_mpi_nprocs_hi=2 -inputN_MIN=2 -inputN_MAX=2)\
-	 -DVecTDot_MPI=VecTDot_MPI_spec -DUSE_VEC_TDOT -DUSE_COMPLEX -DCIVL_COMPLEX -sysIncludePath=$(INC) VecTDot_MPI_driver.cvl $(VEC)/petscvec.c\
-	  VecTDot_MPI.c $(VEC)/civlvec.cvl $(VEC)/civlcomplex.cvl
+ver1r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver1c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+ver2r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=2 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver2c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=2 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+ver3r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=3 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver3c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=3 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+ver4r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=4 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver4c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=4 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+ver5r: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=5 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
+
+ver5c: $(DEPS)
+	$(VERIFYC) -input_mpi_nprocs=5 -inputN_MIN=1 -inputN_MAX=5 $(MODSC)
+
+debug: $(DEPS)
+	$(VERIFYR) -DDEBUG -input_mpi_nprocs=1 -inputN_MIN=3 -inputN_MAX=3 $(MODSR)
+	$(VERIFYC) -DDEBUG -input_mpi_nprocs=1 -inputN_MIN=3 -inputN_MAX=3 $(MODSC)
+	$(VERIFYR) -DDEBUG -input_mpi_nprocs=2 -inputN_MIN=3 -inputN_MAX=3 $(MODSR)
+	$(VERIFYC) -DDEBUG -input_mpi_nprocs=2 -inputN_MIN=3 -inputN_MAX=3 $(MODSC)
+
+versmall: $(DEPS)
+	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=3 $(MODSR)
+	$(VERIFYC) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=3 $(MODSC)
+	$(VERIFYR) -input_mpi_nprocs=2 -inputN_MIN=1 -inputN_MAX=3 $(MODSR)
+	$(VERIFYC) -input_mpi_nprocs=2 -inputN_MIN=1 -inputN_MAX=3 $(MODSC)
 
 clean:
 	rm -rf *.o *~ *.tmp *.exec CIVLREP *.dSYM
 
-clear:
-	clear
-
-.PHONY: clean test
+.PHONY: all runbig runsmall ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c debug versmall clean
