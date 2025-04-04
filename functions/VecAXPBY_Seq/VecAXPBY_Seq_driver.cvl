@@ -45,15 +45,15 @@ int main(void) {
 #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec expectedAXPBY = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec expectedAXPBY = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   VecAXPBY_Seq_spec(expectedAXPBY, alpha, beta, p_x);
   PetscErrorCode err_actual = VecAXPBY_Seq(p_y, alpha, beta, p_x);
 
 #ifdef DEBUG
-  vecprint_mpi("Actual   AXPBY", p_y);
-  vecprint_mpi("Expected AXPBY", expectedAXPBY);
+  CIVL_PrintVec("Actual   AXPBY", p_y);
+  CIVL_PrintVec("Expected AXPBY", expectedAXPBY);
 #endif
   $assert(err_actual == 0);
   bool flg;

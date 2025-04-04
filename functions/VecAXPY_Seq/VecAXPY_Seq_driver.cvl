@@ -37,15 +37,15 @@ int main(void) {
     $vec_print(y);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, MPI_COMM_WORLD);
-  Vec expectedAXPY = civlToPetscVec(z, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec expectedAXPY = CIVL_CivlToPetscVec(z, PETSC_DECIDE, MPI_COMM_WORLD);
   VecAXPY_Seq_spec(expectedAXPY, alpha, p_x);
   PetscErrorCode err_actual = VecAXPY_Seq(p_y, alpha, p_x);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual   AXPY", p_y);
-  vecprint_mpi("Expected AXPY", expectedAXPY);
+  CIVL_PrintVec("Actual   AXPY", p_y);
+  CIVL_PrintVec("Expected AXPY", expectedAXPY);
 #endif
   bool flg;
   VecEqual(p_y, expectedAXPY, &flg);

@@ -54,19 +54,19 @@ int main(void) {
   }
 
   Vec p_x[NV];
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec expected_p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec expected_p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
 
   for (int v = 0; v < NV; v++)
-    p_x[v] = civlToPetscVec(x[v], PETSC_DECIDE, comm);
+    p_x[v] = CIVL_CivlToPetscVec(x[v], PETSC_DECIDE, comm);
 
   VecMAXPBY_spec(expected_p_y, NV, alpha, beta, p_x);
   PetscErrorCode err_actual = VecMAXPBY(p_y, NV, alpha, beta, p_x);
 
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", p_y);
-  vecprint_mpi("Expected", expected_p_y);
+  CIVL_PrintVec("Actual  ", p_y);
+  CIVL_PrintVec("Expected", expected_p_y);
 #endif
   bool flg;
   VecEqual(p_y, expected_p_y, &flg);

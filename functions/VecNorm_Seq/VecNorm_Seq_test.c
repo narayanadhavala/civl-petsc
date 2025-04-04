@@ -16,7 +16,7 @@ int main(void) {
 #endif
   }
   $vec c_x = $vec_make_from_dense(n, values);
-  Vec p_x = civlToPetscVec(c_x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(c_x, PETSC_DECIDE, comm);
   PetscErrorCode actual = VecNorm_Seq(p_x, type, &norm);
   $print("Norm ", type, " = ", norm, "\n");
   VecDestroy(&p_x);

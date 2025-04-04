@@ -56,10 +56,10 @@ int main(void) {
   }
   // PetscErrorCode VecWAXPY(Vec w, PetscScalar alpha, Vec x, Vec y);
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
-  Vec expectedWAXPY = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_z = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec expectedWAXPY = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecWAXPY(p_z, alpha, p_x, p_y);
   $assert(err_actual == 0);
   bool flg;
@@ -70,8 +70,8 @@ int main(void) {
     $pathCondition();
     $print("Flag = ", flg, "\n");
   }
-  vecprint_mpi("Actual   WAXPY", p_z);
-  vecprint_mpi("Expected WAXPY", expectedWAXPY);
+  CIVL_PrintVec("Actual   WAXPY", p_z);
+  CIVL_PrintVec("Expected WAXPY", expectedWAXPY);
   
   VecDestroy(&p_x);
   VecDestroy(&p_y);

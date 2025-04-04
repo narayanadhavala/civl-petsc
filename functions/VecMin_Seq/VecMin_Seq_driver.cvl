@@ -35,7 +35,7 @@ int main() {
 #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   if (N == 0)
     $assume(p_x->map->N == 0 || (p_expected >= 0));
   else

@@ -29,8 +29,8 @@ int main() {
     $vec_print(y);
   }
 
-  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecSet_Seq(actual, alpha);
 
   $assert(err_actual == $false);
@@ -42,8 +42,8 @@ int main() {
     $print("\n");
     $pathCondition();
   }
-  vecprint_mpi("\nActual   VecSet_Seq", actual);
-  vecprint_mpi("\nExpected VecSet_Seq", expected);
+  CIVL_PrintVec("\nActual   VecSet_Seq", actual);
+  CIVL_PrintVec("\nExpected VecSet_Seq", expected);
 
   VecDestroy(&actual);
   VecDestroy(&expected);

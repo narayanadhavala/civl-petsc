@@ -53,15 +53,15 @@ int main() {
 #endif
   }
   MPI_Bcast(&iora, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   VecSetValues_spec(expected, ni, ix, y_values, iora);
   PetscErrorCode err_actual = VecSetValues(p_x, ni, ix, y_values, iora);
   if (iora)
     $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", p_x);
-  vecprint_mpi("Expected", expected);
+  CIVL_PrintVec("Actual  ", p_x);
+  CIVL_PrintVec("Expected", expected);
 #endif
   PetscBool flg;
   VecEqual(p_x, expected, &flg);

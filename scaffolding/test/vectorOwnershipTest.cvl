@@ -20,7 +20,7 @@ void test_vector_distribution() {
     $vec_print(c_v);
   }
 
-  Vec v = civlToPetscVec(c_v, PETSC_DECIDE, comm);
+  Vec v = CIVL_CivlToPetscVec(c_v, PETSC_DECIDE, comm);
 
   // Ensure v->data is valid
   if (!v->data) {

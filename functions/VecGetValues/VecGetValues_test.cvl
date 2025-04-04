@@ -36,7 +36,7 @@ int main() {
     $vec_print(x);
     chosen_proc = $choose_int(nprocs);
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   MPI_Bcast(&chosen_proc, 1, MPI_INT, 0, comm);
   /* Only the chosen process performs VecGetValues and verification */
   if (rank == chosen_proc) {

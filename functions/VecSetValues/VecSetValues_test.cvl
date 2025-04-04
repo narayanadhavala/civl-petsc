@@ -54,8 +54,8 @@ int main() {
     $vec_print(y);
   }
   // Convert CIVL vectors to PETSc vectors
-  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
 
   // Apply VecSetValues to the actual vector
   PetscErrorCode err_actual =
@@ -73,8 +73,8 @@ int main() {
   }
 
   // Print the actual and expected vectors for verification
-  vecprint_mpi("Actual  ", actual);
-  vecprint_mpi("Expected", expected);
+  CIVL_PrintVec("Actual  ", actual);
+  CIVL_PrintVec("Expected", expected);
 
   // Destroy the PETSc vectors to free memory
   VecDestroy(&actual);

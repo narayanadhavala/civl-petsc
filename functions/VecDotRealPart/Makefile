@@ -17,6 +17,9 @@ runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
 
+VecDotRealPart.o: VecDotRealPart.c $(INC)/petscvec.h $(PETSC)
+	$(CC) $(TYPE) -DVecDotRealPart=VecDotRealPart_spec -I$(INC) -I$(PETSC) -c VecDotRealPart.c
+
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
 

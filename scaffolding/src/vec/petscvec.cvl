@@ -263,7 +263,7 @@ PetscErrorCode VecEqual(Vec vec1, Vec vec2, PetscBool *flg) {
   $assert(vec1->map->N == vec2->map->N, "Vector Global sizes mismatch");
   $assert(vec1->map->n == vec2->map->n, "Vector Local sizes mismatch");
 
-  *flg = $vec_eq(petscToCivlVec(vec1), petscToCivlVec(vec2));
+  *flg = $vec_eq(CIVL_PetscToCivlVec(vec1), CIVL_PetscToCivlVec(vec2));
   return 0;
 }
 
@@ -376,7 +376,7 @@ PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y) {
   first = 0;
   n = X->map->n;
   $vec civl_Y = $vec_subseq(civl_X, first, n);
-  Vec newVec = civlToPetscVec(civl_Y, PETSC_DECIDE, X->comm);
+  Vec newVec = CIVL_CivlToPetscVec(civl_Y, PETSC_DECIDE, X->comm);
   *Y = newVec;
   return 0;
 }
@@ -474,11 +474,11 @@ PetscErrorCode VecSet_Seq(Vec x, PetscScalar alpha) {
   $assert(x->read_lock_count == 0,
           "Cannot set values: Vector is locked for reading.");
 
-  $vec civl_vec = petscToCivlVec(x);
+  $vec civl_vec = CIVL_PetscToCivlVec(x);
   int len = $vec_len(civl_vec);
   for (int i = 0; i < len; i++)
     civl_vec = $vec_set(civl_vec, i, alpha);
-  civlToPetscVecCopy(civl_vec, x);
+  CIVL_CivlToPetscVecCopy(civl_vec, x);
 
   return 0;
 }
@@ -491,7 +491,7 @@ PetscErrorCode VecSet(Vec x, PetscScalar alpha) {
 }
 
 PetscErrorCode VecView(Vec vec, PetscViewer viewer) {
-  $vec civl_vec = petscToCivlVec(vec);
+  $vec civl_vec = CIVL_PetscToCivlVec(vec);
   $vec_print(civl_vec);
   return 0;
 }
@@ -510,7 +510,7 @@ PetscErrorCode VecDot_MPI(Vec x, Vec y, PetscScalar *val) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecDot_MPI called\n");
 #endif
-  $vec v1 = petscToCivlVec(x), v2 = petscToCivlVec(y);
+  $vec v1 = CIVL_PetscToCivlVec(x), v2 = CIVL_PetscToCivlVec(y);
   int rank;
   MPI_Comm_rank(x->comm, &rank);
   if (rank == 0)
@@ -558,7 +558,7 @@ PetscErrorCode VecTDot_MPI(Vec x, Vec y, PetscScalar *val) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecTDot_MPI called\n");
 #endif
-  $vec c_x = petscToCivlVec(x), c_y = petscToCivlVec(y);
+  $vec c_x = CIVL_PetscToCivlVec(x), c_y = CIVL_PetscToCivlVec(y);
   PetscScalar local_tdot = scalar_zero;
   for (int i = 0; i < c_x.len; i++)
     local_tdot = scalar_add(local_tdot, scalar_mul(c_x.data[i], c_y.data[i]));
@@ -609,10 +609,10 @@ PetscErrorCode VecMTDot_MPI(Vec x, PetscInt nv, const Vec y[],
   for (int i = 0; i < nv; i++)
     $assert(x->map->N == y[i]->map->N, "Global sizes do not match");
   // Convert x to a CIVL $vec.
-  $vec c_x = petscToCivlVec(x);
+  $vec c_x = CIVL_PetscToCivlVec(x);
   for (int j = 0; j < nv; j++) {
     // Convert y[j] to a CIVL $vec.
-    $vec c_y = petscToCivlVec(y[j]);
+    $vec c_y = CIVL_PetscToCivlVec(y[j]);
     PetscScalar sum = scalar_zero;
     // Compute indefinite dot product without conjugation.
     for (int i = 0; i < c_x.len; i++)
@@ -801,7 +801,7 @@ PetscErrorCode VecMax_Seq(Vec x, PetscInt *p, PetscReal *val) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecMax_Seq\n");
 #endif
-  $vec vec = petscToCivlVec(x);
+  $vec vec = CIVL_PetscToCivlVec(x);
   int rank, idx = -1;
   PetscReal max = PETSC_MIN_REAL;
   $vec_max(vec, &max, &idx);
@@ -814,7 +814,7 @@ PetscErrorCode VecMax_MPI(Vec x, PetscInt *p, PetscReal *val) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecMax_MPI\n");
 #endif
-  $vec vec = petscToCivlVec(x);
+  $vec vec = CIVL_PetscToCivlVec(x);
   int rank, idx = -1;
   PetscReal max = PETSC_MIN_REAL;
   $vec_max(vec, &max, &idx);
@@ -852,7 +852,7 @@ PetscErrorCode VecMin_Seq(Vec x, PetscInt *p, PetscReal *val) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecMin_Seq called\n");
 #endif
-  $vec vec = petscToCivlVec(x);
+  $vec vec = CIVL_PetscToCivlVec(x);
   int idx = -1;
   PetscReal min = PETSC_MAX_REAL;
   $vec_min(vec, &min, &idx);
@@ -865,7 +865,7 @@ PetscErrorCode VecMin_MPI(Vec x, PetscInt *p, PetscReal *val) {
 #ifdef DEBUG
   $print("DEBUG: Spec VecMin_MPI\n");
 #endif
-  $vec vec = petscToCivlVec(x);
+  $vec vec = CIVL_PetscToCivlVec(x);
   int idx = -1;
   PetscReal min = PETSC_MAX_REAL;
   $vec_min(vec, &min, &idx);
@@ -973,12 +973,8 @@ PetscErrorCode VecAXPBY_Seq(Vec y, PetscScalar alpha, PetscScalar beta, Vec x) {
   $assert(x != NULL);
   int n = y->map->n;
   for (int i = 0; i < n; i++) {
-#ifdef USE_COMPLEX
     y->data[i] =
         scalar_add(scalar_mul(alpha, x->data[i]), scalar_mul(beta, y->data[i]));
-#else
-    y->data[i] = alpha * x->data[i] + beta * y->data[i];
-#endif
   }
   y->hdr.state++;
   return 0;
@@ -1028,14 +1024,14 @@ PetscErrorCode VecMAXPBY_alt(Vec y, PetscInt nv, const PetscScalar alpha[],
             "VecMAXPBY_spec: All vectors must have the same size.");
     $assert(y != x[v], "Input vectors cannot contain y itself");
   }
-  $vec c_y = petscToCivlVec(y);
+  $vec c_y = CIVL_PetscToCivlVec(y);
   if (scalar_eq(scalar_of(0.0), beta)) {
     $vec c_z = $vec_zero(c_y.len);
     for (int i = 0; i < c_y.len; i++)
       $vec_set(c_z, i, scalar_of(0.0));
-    civlToPetscVecCopy(c_z, y);
+    CIVL_CivlToPetscVecCopy(c_z, y);
   } else {
-    civlToPetscVecCopy($vec_scalar_mul(beta, c_y), y);
+    CIVL_CivlToPetscVecCopy($vec_scalar_mul(beta, c_y), y);
   }
   VecMAXPY(y, nv, alpha, x);
   return 0;
@@ -1058,8 +1054,8 @@ PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
             "VecMAXPBY_spec: All vectors must have the same size.");
     $assert(y != x[v], "Input vectors cannot contain y itself");
   }
-  $vec c_y = petscToCivlVec(y);
-  civlToPetscVecCopy($vec_scalar_mul(beta, c_y), y);
+  $vec c_y = CIVL_PetscToCivlVec(y);
+  CIVL_CivlToPetscVecCopy($vec_scalar_mul(beta, c_y), y);
   VecMAXPY(y, nv, alpha, x);
   return 0;
 }
@@ -1344,7 +1340,7 @@ PetscErrorCode VecNorm_MPI(Vec x, NormType type, PetscReal *val) {
 #endif
   int rank;
   MPI_Comm_rank(x->comm, &rank);
-  $vec vec = petscToCivlVec(x);
+  $vec vec = CIVL_PetscToCivlVec(x);
   if (rank == 0)
     $petsc_norm(vec, type, val);
   MPI_Bcast(val, (type == NORM_1_AND_2 ? 2 : 1), MPIU_REAL, 0, x->comm);
@@ -1542,7 +1538,7 @@ PetscErrorCode VecSetValues_MPI(Vec x, PetscInt ni, const PetscInt ix[],
                                 const PetscScalar y[], InsertMode iora) {
   int len;
   $assert(x && ix && y && ni >= 0);
-  $vec cvec = petscToCivlVec(x);
+  $vec cvec = CIVL_PetscToCivlVec(x);
   len = cvec.len;
   for (int i = 0; i < ni; i++) {
     int local_index = ix[i];
@@ -1553,7 +1549,7 @@ PetscErrorCode VecSetValues_MPI(Vec x, PetscInt ni, const PetscInt ix[],
     else if (iora == ADD_VALUES)
       cvec.data[local_index] = scalar_add(cvec.data[local_index], y[i]);
   }
-  civlToPetscVecCopy(cvec, x);
+  CIVL_CivlToPetscVecCopy(cvec, x);
   x->hdr.state++;
   return 0;
 }
@@ -1578,8 +1574,8 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[],
 }
 
 /* PetscErrorCode VecSetValuesBlocked_Seq(Vec x, PetscInt ni, const PetscInt
-ix[], const PetscScalar y[], InsertMode iora) { $assert(x != NULL && x->data &&
-ix != NULL && y != NULL); $assert(ni >= 0, "Number of blocks (ni) must be
+ix[], const PetscScalar y[], InsertMode iora) { $assert(x != NULL && x->data
+&& ix != NULL && y != NULL); $assert(ni >= 0, "Number of blocks (ni) must be
 non-negative.");
 
   const PetscInt bs = x->map->bs;
@@ -1610,8 +1606,8 @@ non-negative.");
   return 0;
 }
 
-PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt ix[],
-                                       const PetscScalar y[], InsertMode iora) {
+PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt
+ix[], const PetscScalar y[], InsertMode iora) {
   // $assert(x != NULL && x->data && ix != NULL && y != NULL);
   $assert(ni >= 0, "Number of blocks (ni) must be non-negative.");
   const PetscInt bs = x->map->bs;
@@ -1691,7 +1687,7 @@ PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt ix[],
                                        const PetscScalar y[], InsertMode iora) {
   const int bs = x->map->bs;
   $assert(bs > 0, "Block size must be positive.");
-  $vec cvec = petscToCivlVec(x);
+  $vec cvec = CIVL_PetscToCivlVec(x);
   int len = cvec.len; // Global length of the vector.
   for (int i = 0; i < ni; i++) {
     if (ix[i] < 0)
@@ -1708,7 +1704,7 @@ PetscErrorCode VecSetValuesBlocked_MPI(Vec x, PetscInt ni, const PetscInt ix[],
         cvec.data[idx] = scalar_add(cvec.data[idx], y[i * bs + j]);
     }
   }
-  civlToPetscVecCopy(cvec, x);
+  CIVL_CivlToPetscVecCopy(cvec, x);
   x->hdr.state++;
   return 0;
 }
@@ -1794,7 +1790,8 @@ PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
   $assert(newis->map != NULL, "Allocation for newis->map failed");
 
   MPI_Comm_size(comm, &(newis->map->nproc));
-  MPI_Comm_rank(comm, &(newis->map->rstart)); // Use rank for offset calculation
+  MPI_Comm_rank(comm,
+                &(newis->map->rstart)); // Use rank for offset calculation
 
   newis->map->bs = -1;
   newis->map->n = n; // Local size
@@ -1866,8 +1863,8 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]) {
     big = $vec_concat(big, tmp);
   }
   // Convert the concatenated $vec back to a PETSc Vec.
-  Vec newVec =
-      civlToPetscVec(big, PETSC_DECIDE, PetscObjectComm((PetscObject)X[0]));
+  Vec newVec = CIVL_CivlToPetscVec(big, PETSC_DECIDE,
+                                   PetscObjectComm((PetscObject)X[0]));
   *Y = newVec;
 
   // For this spec stub, we do not build an index set.
@@ -2040,28 +2037,7 @@ PetscErrorCode VecConjugate_Seq(Vec xin) {
   return 0;
 }
 
-Vec vec_create_seq(int n, PetscScalar *data) {
-  Vec vec = (Vec)malloc(sizeof(struct Vec_s));
-  vec->map = (SimpleMap)malloc(sizeof(struct map_s));
-  vec->map->n = n;
-  vec->map->N = n;
-  vec->map->bs = 0;
-  vec->data = (PetscScalar *)malloc(n * sizeof(PetscScalar));
-  if (data != NULL) {
-    for (int i = 0; i < n; i++)
-#ifdef USE_COMPLEX
-      vec->data[i] = $make_complex(data[i].real, data[i].imag);
-#else
-      vec->data[i] = data[i];
-#endif
-  } else {
-    for (int i = 0; i < n; i++)
-      vec->data[i] = scalar_make(0.0, 0.0);
-  }
-  return vec;
-}
-
-void vecprint_seq(const char *name, Vec vin) {
+void CIVL_PrintSeqVec(const char *name, Vec vin) {
   int N = vin->map->N;
   STYPE *data = vin->data;
   $vec c_v = $vec_make_from_dense(N, data);
@@ -2069,25 +2045,26 @@ void vecprint_seq(const char *name, Vec vin) {
   $vec_print(c_v);
 }
 
-void vec_destroy_seq(Vec vec) {
-  free(vec->data);
-  free(vec->hdr.realcomposedstate);
-  free(vec->hdr.realcomposeddata);
-  free(vec->map);
-  free(vec);
-}
-
-void vecprint_mpi(const char *name, Vec vin) {
+void CIVL_PrintMPIVec(const char *name, Vec vin) {
   int rank;
   MPI_Comm_rank(vin->comm, &rank);
-  $vec civl_vec = petscToCivlVec(vin);
+  $vec civl_vec = CIVL_PetscToCivlVec(vin);
   if (rank == 0) {
     $print("\n", name, ": ");
     $vec_print(civl_vec);
   }
 }
 
-$vec petscToCivlVec(Vec petscVec) {
+void CIVL_PrintVec(const char *name, Vec vin) {
+  if (vin->type == VECSEQ)
+    CIVL_PrintSeqVec(name, vin);
+  else if (vin->type == VECMPI)
+    CIVL_PrintMPIVec(name, vin);
+  else
+    $assert(0, "Invalid vector type");
+}
+
+$vec CIVL_PetscToCivlVec(Vec petscVec) {
   int N = petscVec->map->N;
   PetscScalar *data = petscVec->data;
   if (petscVec->type == VECSEQ) {
@@ -2156,8 +2133,8 @@ $vec petscToCivlVec(Vec petscVec) {
   }
 }
 
-void civlToPetscVecCopy($vec in, Vec out) {
-  Vec z = civlToPetscVec(in, out->map->n, out->comm);
+void CIVL_CivlToPetscVecCopy($vec in, Vec out) {
+  Vec z = CIVL_CivlToPetscVec(in, out->map->n, out->comm);
   VecCopy(z, out);
   VecDestroy(&z);
 }
@@ -2167,7 +2144,7 @@ void civlToPetscVecCopy($vec in, Vec out) {
    PETSC_DECIDE to use the standard distribution. On processess of non-zero
    rank, the 'in' aurgment is ignored.
 */
-Vec civlToPetscVec($vec in, int n, MPI_Comm comm) {
+Vec CIVL_CivlToPetscVec($vec in, int n, MPI_Comm comm) {
   Vec out; // PETSc vector to be returned
   int N, rank;
   MPI_Comm_rank(comm, &rank);

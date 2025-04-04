@@ -44,7 +44,7 @@ int main() {
 
   MPI_Bcast(&chosen_proc, 1, MPI_INT, 0, comm);
   // Convert x to PETSc Vec for testing
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
 
   if (rank == chosen_proc) {
     int ix[ni];

@@ -32,15 +32,15 @@ int main(void) {
 #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_expected = civlToPetscVec(expected, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_expected = CIVL_CivlToPetscVec(expected, PETSC_DECIDE, comm);
   VecCopy_spec(p_x, p_expected);
   PetscErrorCode err_actual = VecCopy(p_x, p_y);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", p_y);
-  vecprint_mpi("Expected", p_expected);
+  CIVL_PrintVec("Actual  ", p_y);
+  CIVL_PrintVec("Expected", p_expected);
 #endif
   bool flg;
   VecEqual(p_y, p_expected, &flg);

@@ -17,6 +17,9 @@ runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
 
+VecTDot_MPI.o: VecTDot_MPI.c $(INC)/petscvec.h $(PETSC)
+	$(CC) $(TYPE) -DVecTDot_MPI=VecTDot_MPI_spec -I$(INC) -I$(PETSC) -c VecTDot_MPI.c
+
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
 

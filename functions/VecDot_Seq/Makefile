@@ -17,6 +17,9 @@ runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
 
+VecDot_Seq.o: VecDot_Seq.c $(INC)/petscvec.h $(PETSC)
+	$(CC) $(TYPE) -DVecDot_Seq=VecDot_Seq_spec -I$(INC) -I$(PETSC) -c VecDot_Seq.c
+
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
 

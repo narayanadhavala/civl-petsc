@@ -33,16 +33,16 @@ int main(void) {
 #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec actual = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
 
   VecCopy_Seq_spec(p_x, expected);
   PetscErrorCode err_actual = VecCopy_Seq(p_x, actual);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_seq("Actual  ", actual);
-  vecprint_seq("Expected", expected);
+  CIVL_PrintVec("Actual  ", actual);
+  CIVL_PrintVec("Expected", expected);
 #endif
   bool flg;
   VecEqual(actual, expected, &flg);

@@ -24,7 +24,7 @@ int main() {
     $vec_print(x);
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecMin_Seq(p_x, &p_actual, &actual);
   VecMin_Seq_spec(p_x, &p_expected, &expected);
 

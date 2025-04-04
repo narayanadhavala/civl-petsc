@@ -17,6 +17,9 @@ runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
 
+VecMin.o: VecMin.c $(INC)/petscvec.h $(PETSC)
+	$(CC) $(TYPE) -DVecMin=VecMin_spec -I$(INC) -I$(PETSC) -c VecMin.c
+
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=0 -inputN_MAX=5 $(MODSR)
 

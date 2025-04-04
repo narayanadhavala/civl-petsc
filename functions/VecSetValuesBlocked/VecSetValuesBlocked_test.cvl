@@ -64,8 +64,8 @@ int main(void) {
       }
     }
   }
-  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
 
   VecSetBlockSize(actual, bs);
 
@@ -82,8 +82,8 @@ int main(void) {
     $pathCondition();
   }
 
-  vecprint_mpi("Actual  ", actual);
-  vecprint_mpi("Expected", expected);
+  CIVL_PrintVec("Actual  ", actual);
+  CIVL_PrintVec("Expected", expected);
   VecDestroy(&actual);
   VecDestroy(&expected);
   MPI_Finalize();

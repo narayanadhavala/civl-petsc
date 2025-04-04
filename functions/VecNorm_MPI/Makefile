@@ -17,6 +17,9 @@ runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
 
+VecNorm_MPI.o: VecNorm_MPI.c $(INC)/petscvec.h $(PETSC)
+	$(CC) $(TYPE) -DVecNorm_MPI=VecNorm_MPI_spec -I$(INC) -I$(PETSC) -c VecNorm_MPI.c
+
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
 

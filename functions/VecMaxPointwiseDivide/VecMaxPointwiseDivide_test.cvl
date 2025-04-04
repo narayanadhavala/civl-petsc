@@ -27,8 +27,8 @@ int main(void) {
     $print("\ny: ");
     $vec_print(y);
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   PetscErrorCode actual = VecMaxPointwiseDivide(p_x, p_y, &max);
   if (rank == 0){
     if (actual == 0)

@@ -32,7 +32,7 @@ int main (){
 /*   MPI_Bcast(&p_expected, 1, MPI_INT, 0, comm);
   MPI_Bcast(&expected, 1, MPI_DOUBLE, 0, comm); */
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecMax_MPI(p_x, &p_actual, &actual);
   VecMax_MPI_spec(p_x, &p_expected, &expected);
 

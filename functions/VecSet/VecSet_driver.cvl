@@ -24,14 +24,14 @@ int main() {
     $vec_print(x);
 #endif
   }
-  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   VecSet_spec(expected, alpha);
   PetscErrorCode err_actual = VecSet(actual, alpha);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", actual);
-  vecprint_mpi("Expected", expected);
+  CIVL_PrintVec("Actual  ", actual);
+  CIVL_PrintVec("Expected", expected);
 #endif
   bool flg;
   VecEqual(actual, expected, &flg);

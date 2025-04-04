@@ -23,8 +23,8 @@ int main(void) {
     $print("\ny: ");
     $vec_print(c_y);
   }
-  Vec p_x = civlToPetscVec(c_x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(c_y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(c_x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(c_y, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecTDot_Seq(p_x, p_y, &actual);
   VecTDot_Seq_spec(p_x, p_y, &expected);
   $assert(err_actual == 0);

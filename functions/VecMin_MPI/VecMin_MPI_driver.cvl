@@ -33,7 +33,7 @@ int main() {
 #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   VecMin_MPI_spec(p_x, &p_expected, &expected);
   PetscErrorCode err_actual = VecMin_MPI(p_x, &p_actual, &actual);
   $assert(err_actual == 0);

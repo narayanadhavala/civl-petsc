@@ -37,8 +37,8 @@ int main(void) {
 #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   VecTDot_MPI_spec(p_x, p_y, &expected);
   PetscErrorCode err_actual = VecTDot_MPI(p_x, p_y, &actual);
 

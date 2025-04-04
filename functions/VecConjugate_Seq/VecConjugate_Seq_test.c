@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
   // Print values of x before conjugation
   printf("\nBefore VecConjugate_Seq:\n");
   PetscCall(VecGetArrayRead(x, &x_array));
-  vecprint_seq("X", x);
+  CIVL_PrintVec("X", x);
   PetscCall(VecRestoreArrayRead(x, &x_array));
 
   PetscCall(VecCopy_Seq(x, y));
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   // Print values of x after conjugation
   printf("\nAfter calling VecConjugate_Seq:\n");
   PetscCall(VecGetArrayRead(x, &x_array));
-  vecprint_seq("X", x);
+  CIVL_PrintVec("X", x);
 
   // Calculate the conjugate using VecConjugate_Spec
   PetscErrorCode expected = PetscCall(VecConjugate_Seq_spec(y));
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   // Print values of y after conjugation
   printf("\nAfter calling VecConjugate_Seq_Spec:\n");
   PetscCall(VecGetArrayRead(y, &x_array));
-  vecprint_seq("X", x);
+  CIVL_PrintVec("X", x);
 
   // Verify that the conjugation is correct
   for (PetscInt i = 0; i < n; i++) {

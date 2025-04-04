@@ -29,7 +29,7 @@ int main() {
     $vec_print(x);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   VecMax_spec(p_x, &i_expected, &expected);
   PetscErrorCode err_actual = VecMax(p_x, &i_actual, &actual);
 #ifdef DEBUG

@@ -30,14 +30,14 @@ int main(void) {
     $vec_print(x);
 #endif
   }
-  Vec actual = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   VecConjugate_Seq_spec(expected);
   PetscErrorCode actual_err = VecConjugate_Seq(actual);
   $assert(actual_err == 0);
 #ifdef DEBUG
-  vecprint_seq("Actual  ", actual);
-  vecprint_seq("Expected", expected);
+  CIVL_PrintVec("Actual  ", actual);
+  CIVL_PrintVec("Expected", expected);
 #endif
   bool flg;
   VecEqual(actual, expected, &flg);

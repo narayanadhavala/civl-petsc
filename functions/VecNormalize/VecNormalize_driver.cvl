@@ -34,8 +34,8 @@ int main(void) {
     $vec_print(x);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_expected = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_expected = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   CIVL_RTYPE expected = 0.0, actual = 0.0;
   VecNormalize_spec(p_expected, &expected);
   PetscErrorCode err_actual = VecNormalize(p_x, &actual);

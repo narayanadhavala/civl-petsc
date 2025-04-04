@@ -35,7 +35,7 @@ int main(void) {
     $vec_print(x);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   bool before_avail, after_avail;
   PetscReal actual[2] = {0.0, 0.0};
 

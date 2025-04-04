@@ -34,8 +34,8 @@ int main(void) {
     $vec_print(y);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   VecDotRealPart_spec(p_x, p_y, &expected);
   PetscErrorCode err_actual = VecDotRealPart(p_x, p_y, &actual);
 

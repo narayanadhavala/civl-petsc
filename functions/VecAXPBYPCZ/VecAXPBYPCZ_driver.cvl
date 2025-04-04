@@ -48,16 +48,16 @@ int main(void) {
     $vec_print(z);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec p_z = civlToPetscVec(z, PETSC_DECIDE, comm);
-  Vec expected = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_z = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec expected = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
   VecAXPBYPCZ_spec(expected, alpha, beta, gamma, p_x, p_y);
   PetscErrorCode err_actual = VecAXPBYPCZ(p_z, alpha, beta, gamma, p_x, p_y);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", p_z);
-  vecprint_mpi("Expected", expected);
+  CIVL_PrintVec("Actual  ", p_z);
+  CIVL_PrintVec("Expected", expected);
 #endif
   bool flg;
   VecEqual(p_z, expected, &flg);

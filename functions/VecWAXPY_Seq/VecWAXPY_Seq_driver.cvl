@@ -40,17 +40,17 @@ int main(void) {
   #endif
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec p_w = civlToPetscVec(z, PETSC_DECIDE, comm);
-  Vec expectedWAXPY = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_w = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec expectedWAXPY = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
   VecWAXPY_Seq_spec(expectedWAXPY, alpha, p_x, p_y);
   PetscErrorCode err_actual = VecWAXPY_Seq(p_w, alpha, p_x, p_y);
   
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", p_w);
-  vecprint_mpi("Expected", expectedWAXPY);
+  CIVL_PrintVec("Actual  ", p_w);
+  CIVL_PrintVec("Expected", expectedWAXPY);
 #endif
   bool flg;
   VecEqual(p_w, expectedWAXPY, &flg);

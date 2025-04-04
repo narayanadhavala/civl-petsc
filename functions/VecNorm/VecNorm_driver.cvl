@@ -40,7 +40,7 @@ int main(void) {
   }
   MPI_Bcast(&normType, 1, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&expected, 2, MPIU_REAL, 0, MPI_COMM_WORLD);
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
   PetscErrorCode err_actual = VecNorm(p_x, normType, actual);
   $assert(err_actual == 0);
 

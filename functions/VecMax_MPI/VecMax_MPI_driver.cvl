@@ -30,7 +30,7 @@ int main() {
     $print("\nx = "); $vec_print(x);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   VecMax_MPI_spec(p_x, &i_expected, &expected);
   PetscErrorCode err_actual = VecMax_MPI(p_x, &i_actual, &actual);
 #ifdef DEBUG

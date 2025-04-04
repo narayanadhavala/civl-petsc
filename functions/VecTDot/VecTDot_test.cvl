@@ -41,8 +41,8 @@ int main(void) {
     $print("\nVector y:\n");
     $vec_print(c_y);
   }
-  Vec p_x = civlToPetscVec(c_x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(c_y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(c_x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(c_y, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecTDot(p_x, p_y, &actual);
   $assert(err_actual == 0);
   if (rank == 0) {

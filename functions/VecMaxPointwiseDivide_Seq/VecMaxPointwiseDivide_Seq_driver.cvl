@@ -37,8 +37,8 @@ int main(void) {
 #endif
   }
   CIVL_RTYPE max_actual, max_expected;
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
   VecMaxPointwiseDivide_Seq_spec(p_x, p_y, &max_expected);
   PetscErrorCode err_actual = VecMaxPointwiseDivide_Seq(p_x, p_y, &max_actual);
   $assert(err_actual == 0);

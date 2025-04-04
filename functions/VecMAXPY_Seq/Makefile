@@ -17,6 +17,9 @@ runsmall: versmall
 
 # Note: add -DDEBUG to any command below to see lots of detail
 
+VecMAXPY_Seq.o: VecMAXPY_Seq.c $(INC)/petscvec.h $(PETSC)
+	$(CC) $(TYPE) -DVecMAXPY_Seq=VecMAXPY_Seq_spec -I$(INC) -I$(PETSC) -c VecMAXPY_Seq.c
+
 ver1r: $(DEPS)
 	$(VERIFYR) -input_mpi_nprocs=1 -inputN_MIN=1 -inputN_MAX=5 $(MODSR)
 

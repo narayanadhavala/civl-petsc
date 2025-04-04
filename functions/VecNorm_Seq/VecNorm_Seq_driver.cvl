@@ -36,10 +36,10 @@ int main(void) {
     $print("\n");
 #endif
   }
-  Vec p_x1 = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec p_x1 = CIVL_CivlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
   MPI_Bcast(&normType, 1, MPI_INT, 0, MPI_COMM_WORLD);
   VecNorm_Seq_spec(p_x1, normType, expected);
-  Vec p_x2 = civlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
+  Vec p_x2 = CIVL_CivlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
   PetscErrorCode err_actual = VecNorm_Seq(p_x2, normType, actual);
   $assert(err_actual == 0);
   if (normType == NORM_1_AND_2) {
@@ -56,8 +56,8 @@ int main(void) {
     $assert($equals(&actual[0], &expected[0]),
             "Actual and expected are not equal\n");
   }
-  vec_destroy_seq(p_x1);
-  vec_destroy_seq(p_x2);
+  VecDestroy(&p_x1);
+  VecDestroy(&p_x2);
   MPI_Finalize();
 #ifndef DEBUG
   if (rank == 0)

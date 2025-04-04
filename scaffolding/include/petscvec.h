@@ -1244,7 +1244,7 @@ PetscErrorCode VecSetUp(Vec v);
 
   Note: Converts `X` to `$vec`, extracts the required subsequence using
   `$vec_subseq`, and converts the result back to a PETSc `Vec` using
-  `civlToPetscVecCopy`.
+  `CIVL_CivlToPetscVecCopy`.
   - Extracted from petscvec.h
   - URL:
   https://petsc.org/release/manualpages/Vec/VecGetSubVector/#vecgetsubvector
@@ -2905,24 +2905,39 @@ PetscErrorCode BLASaxpy_(const PetscBLASInt *n, const PetscScalar *alpha,
 
   Parameters:
   - petscVec: The PETSc vector to be converted.
-
-  Returns:
   - $vec: The corresponding CIVL vector.
 */
-$vec petscToCivlVec(Vec petscVec);
+$vec CIVL_PetscToCivlVec(Vec petscVec);
 
-void civlToPetscVecCopy($vec in, Vec out);
+/*
+  Copies the contents of a CIVL vector to a PETSc vector.
+
+  Parameters:
+  - in: Input CIVL vector.
+  - out: Output PETSc vector to store the copied data.
+ */
+void CIVL_CivlToPetscVecCopy($vec in, Vec out);
 
 /*
   Converts a CIVL vector to a PETSc vector representation.
 
   Parameters:
   - in: The CIVL vector that contains data to populate the PETSc vector.
-
-  Returns:
   - Vec: The corresponding PETSc vector.
 */
-Vec civlToPetscVec($vec in, int n, MPI_Comm comm);
+Vec CIVL_CivlToPetscVec($vec in, int n, MPI_Comm comm);
+
+/*
+  Prints the contents of a vector based on its type (sequential or parallel).
+  Parameters:
+  - name Name or label for the vector to be printed.
+  - vin Input vector to be printed.
+
+  Note: Calls specific print functions based on the vector type (VECSEQ or
+  VECMPI). Prints complex numbers in the form (a + bi) if USE_COMPLEX is
+  defined, otherwise prints real numbers.
+ */
+void CIVL_PrintVec(const char *name, Vec vin);
 
 /*
   Prints the contents of a sequential vector.
@@ -2933,7 +2948,7 @@ Vec civlToPetscVec($vec in, int n, MPI_Comm comm);
   Note: Prints complex numbers in the form (a + bi) if USE_COMPLEX is
   defined, otherwise prints real numbers.
  */
-void vecprint_seq(const char *name, Vec vin);
+void CIVL_PrintSeqVec(const char *name, Vec vin);
 
 /*
   Prints the contents of a MPI vector.
@@ -2944,44 +2959,7 @@ void vecprint_seq(const char *name, Vec vin);
   Note: Prints complex numbers in the form (a + bi) if USE_COMPLEX is
   defined, otherwise prints real numbers.
  */
-void vecprint_mpi(const char *name, Vec vin);
-
-/*
-  Creates a new sequential vector.
-  Parameters:
-  - n Number of elements in the vector.
-  - data Pointer to initial data for the vector. If NULL, vector is initialized
-  with zeros.
-
-  Returns: Vec The newly created vector.
-
-  Note: Allocates memory for the vector structure, its map, and its data.
-        Handles both real and complex data based on USE_COMPLEX definition.
- */
-Vec vec_create_seq(int n, PetscScalar *data);
-
-/*
-  Checks if two sequential vectors are equal.
-  Parameters:
-  - vec1 First vector for comparison.
-  - vec2 Second vector for comparison.
-
-  Returns: bool True if vectors are equal, false otherwise.
-
-  Note: Compares vector sizes, block sizes, and all elements.
-        For complex numbers, compares both real and imaginary parts.
- */
-bool vec_eq_seq(Vec vec1, Vec vec2);
-
-/*
-  Destroys a sequential vector and frees its memory.
-  Parameters:
-  - vec Vector to be destroyed.
-
-  Note: Frees memory for the vector's data, map, and the vector structure
-  itself.
- */
-void vec_destroy_seq(Vec vec);
+void CIVL_PrintMPIVec(const char *name, Vec vin);
 
 typedef struct _VecOps *VecOps;
 

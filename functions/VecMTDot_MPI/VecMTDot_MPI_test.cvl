@@ -80,10 +80,10 @@ int main(void) {
 
   /* Convert CIVL vectors to PETSc Vecs for testing */
   STYPE val_ref[nv], val_actual[nv];
-  Vec px = civlToPetscVec(civl_x, PETSC_DECIDE, comm);
+  Vec px = CIVL_CivlToPetscVec(civl_x, PETSC_DECIDE, comm);
   Vec py[nv];
   for (int i = 0; i < nv; i++)
-    py[i] = civlToPetscVec(civl_y[i], PETSC_DECIDE, comm);
+    py[i] = CIVL_CivlToPetscVec(civl_y[i], PETSC_DECIDE, comm);
 
   /* Compute dot products using VecMTDot_MPI */
   PetscErrorCode err = VecMTDot_MPI(px, nv, py, val_actual);

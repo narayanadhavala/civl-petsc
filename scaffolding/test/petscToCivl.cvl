@@ -29,9 +29,9 @@ int main(void) {
   if (rank == 0)
     $print("No.of procs: ", size, "\n");
   $vec x = $vec_make_from_dense(N, value);
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  vecprint_mpi("petsc vectr", p_x);
-  $vec c_x = petscToCivlVec(p_x);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  CIVL_PrintVec("petsc vectr", p_x);
+  $vec c_x = CIVL_PetscToCivlVec(p_x);
   if (rank == 0) {
     $print("CIVL Vector:");
     $vec_print(c_x);

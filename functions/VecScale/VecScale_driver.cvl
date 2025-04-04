@@ -29,14 +29,14 @@ int main() {
     $vec_print(x);
 #endif
   }
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_expected = civlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_expected = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
   VecScale_spec(p_expected, alpha);
   PetscErrorCode err_actual = VecScale(p_x, alpha);
   $assert(err_actual == 0);
 #ifdef DEBUG
-  vecprint_mpi("Actual  ", p_x);
-  vecprint_mpi("Expected", p_expected);
+  CIVL_PrintVec("Actual  ", p_x);
+  CIVL_PrintVec("Expected", p_expected);
 #endif
   bool flg;
   VecEqual(p_x, p_expected, &flg);

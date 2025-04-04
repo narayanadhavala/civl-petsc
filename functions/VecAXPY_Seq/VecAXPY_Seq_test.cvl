@@ -40,9 +40,9 @@ int main(void) {
     $vec_print(y);
   }
 
-  Vec p_x = civlToPetscVec(x, PETSC_DECIDE, comm);
-  Vec p_y = civlToPetscVec(y, PETSC_DECIDE, comm);
-  Vec expectedAXPY = civlToPetscVec(z, PETSC_DECIDE, comm);
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec expectedAXPY = CIVL_CivlToPetscVec(z, PETSC_DECIDE, comm);
   PetscErrorCode err_actual = VecAXPY_Seq(p_y, alpha, p_x);
   $assert(err_actual == 0);
   bool flg;
@@ -52,8 +52,8 @@ int main(void) {
     $print("\n");
     $pathCondition();
   }
-  vecprint_mpi("Actual  ", p_y);
-  vecprint_mpi("Expected", expectedAXPY);
+  CIVL_PrintVec("Actual  ", p_y);
+  CIVL_PrintVec("Expected", expectedAXPY);
 
   VecDestroy(&p_x);
   VecDestroy(&p_y);
