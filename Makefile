@@ -2,7 +2,7 @@
 # (it skips hidden folders and the folder called "CIVLREP").
 SUBDIRS := $(shell find functions -mindepth 1 -maxdepth 1 -type d -not -name ".*" -not -name "CIVLREP" -exec basename {} \;)
 
-# The "all" target runs tests in each subfolder.
+# The "small" target runs tests in each subfolder.
 # It runs the verification tests with vector sizes from 1..3 and processor counts from 1 and 2,
 # covering both real and complex cases.
 small:
@@ -13,7 +13,7 @@ small:
 	  $(MAKE) -C functions/$$dir small; \
 	done
 
-# The "runbig" target runs tests in each subfolder.
+# The "big" target runs tests in each subfolder.
 # It runs the verification tests with vector sizes from 1..5 and processor counts from 1..5,
 # covering both real and complex cases.
 big:
