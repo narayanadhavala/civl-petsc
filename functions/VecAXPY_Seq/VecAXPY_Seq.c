@@ -8,7 +8,8 @@ PetscErrorCode VecAXPY_Seq(Vec yin, PetscScalar alpha, Vec xin) {
   PetscFunctionBegin;
   /* assume that the BLAS handles alpha == 1.0 efficiently since we have no fast
    * code for it */
-  // if (alpha != (PetscScalar)0.0)
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (!scalar_eq(alpha, scalar_zero)) {
     const PetscScalar *xarray;
     PetscScalar *yarray;

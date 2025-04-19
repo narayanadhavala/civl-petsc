@@ -6,7 +6,8 @@ PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha) {
   $print("DEBUG: Target VecScale_Seq Alpha = ", alpha, "\n");
 #endif
   PetscFunctionBegin;
-  // if (alpha == (PetscScalar)0.0)
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(alpha, scalar_zero)) {
     PetscCall(VecSet_Seq(xin, alpha));
   } else if (!scalar_eq(alpha, scalar_of(1.0))) {

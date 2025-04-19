@@ -11,18 +11,14 @@ static inline PetscScalar BLASdotu_(const PetscBLASInt *n, const PetscScalar *x,
 #ifdef DEBUG
   $print("Target BLASdotu n=", *n, "\n");
 #endif
-
-  if (*sx == 1 && *sy == 1) {
-    for (i = 0; i < *n; i++) {
-      // sum += x[i] * y[i];
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
+  if (*sx == 1 && *sy == 1)
+    for (i = 0; i < *n; i++)
       sum = scalar_add(sum, scalar_mul(x[i], y[i]));
-    }
-  } else {
-    for (i = 0, j = 0, k = 0; i < *n; i++, j += *sx, k += *sy) {
-      // sum += x[j] * y[k];
+  else
+    for (i = 0, j = 0, k = 0; i < *n; i++, j += *sx, k += *sy)
       sum = scalar_add(sum, scalar_mul(x[j], y[k]));
-    }
-  }
   return sum;
 }
 

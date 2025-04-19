@@ -3,9 +3,11 @@
 
 PetscErrorCode VecAXPBY_Seq(Vec yin, PetscScalar a, PetscScalar b, Vec xin) {
 #ifdef DEBUG
-  $print("Target VecAXPBY_Seq: alpha=", a," beta=",b,"\n");
+  $print("Target VecAXPBY_Seq: alpha=", a, " beta=", b, "\n");
 #endif
   PetscFunctionBegin;
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(a, scalar_zero)) {
     PetscCall(VecScale_Seq(yin, b));
   } else if (scalar_eq(b, scalar_of(1.0))) {

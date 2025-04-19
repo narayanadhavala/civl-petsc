@@ -13,6 +13,8 @@ PetscErrorCode VecWAXPY_Seq(Vec win, PetscScalar alpha, Vec xin, Vec yin) {
   PetscCall(VecGetArrayRead(xin, &xx));
   PetscCall(VecGetArrayRead(yin, &yy));
   PetscCall(VecGetArray(win, &ww));
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(alpha, scalar_of(1.0))) {
     PetscCall(PetscLogFlops(n));
     // could call BLAS axpy after call to memcopy, but may be slower

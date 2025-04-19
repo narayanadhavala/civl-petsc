@@ -9,6 +9,8 @@ VecXDot_MPI_Default(Vec xin, Vec yin, PetscScalar *z,
 #endif
   PetscFunctionBegin;
   PetscCall(VecXDot_SeqFn(xin, yin, z));
+  /* Change by Venkata: removed MPI_IN_PLACE reduction for MPI_SCALAR type
+   * struct as CIVL doesn't support it */
 #ifdef USE_COMPLEX
   {
     PetscReal local[2], tmp[2];

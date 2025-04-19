@@ -6,7 +6,8 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscScalar alpha, Vec xin) {
   $print("Target VecAYPX_Seq: alpha=", alpha, "\n");
 #endif
   PetscFunctionBegin;
-  // if (alpha == (PetscScalar)0.0)
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(alpha, scalar_zero)) {
     PetscCall(VecCopy(xin, yin));
   } else if (scalar_eq(alpha, scalar_of(1.0))) {
@@ -19,19 +20,15 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscScalar alpha, Vec xin) {
     PetscCall(VecGetArrayRead(xin, &xx));
     PetscCall(VecGetArray(yin, &yy));
     if (scalar_eq(alpha, scalar_of(-1.0))) {
-      for (PetscInt i = 0; i < n; ++i) {
-        // yy[i] = xx[i] - yy[i];
+      for (PetscInt i = 0; i < n; ++i)
         yy[i] = scalar_sub(xx[i], yy[i]);
-      }
       PetscCall(PetscLogFlops(n));
     } else {
 #if defined(PETSC_USE_FORTRAN_KERNEL_AYPX)
       fortranaypx_(&n, &alpha, xx, yy);
 #else
-      for (PetscInt i = 0; i < n; ++i) {
-        // yy[i] = xx[i] + alpha * yy[i];
+      for (PetscInt i = 0; i < n; ++i)
         yy[i] = scalar_add(xx[i], scalar_mul(alpha, yy[i]));
-      }
 #endif
       PetscCall(PetscLogFlops(2 * n));
     }

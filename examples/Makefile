@@ -1,36 +1,63 @@
-test: test_ex1 test_ex11
+ROOT = /opt/sw/petsc
+INC = $(ROOT)/include
+LIB = $(ROOT)/LIB
+N = 1
+CC = /opt/sw/petsc/PETScV2/bin/mpicc
+# CC = gcc
+PETSC_CC_INCLUDES = -I/opt/sw/petsc/include -I/opt/sw/petsc/PETScV2/include
+MPIEXEC = /opt/sw/petsc/PETScV2/bin/mpiexec
+CC_FLAGS =  -Wall -Wwrite-strings -Wno-unknown-pragmas -Wno-lto-type-mismatch -Wno-stringop-overflow -fstack-protector -fvisibility=hidden -g3 -O0
+BLASLAPACK_LIB = -Wl,-rpath,/opt/sw/petsc/PETScV2/lib -L/opt/sw/petsc/PETScV2/lib -lflapack -lfblas
+PETSC_WITH_EXTERNAL_LIB = -Wl,-rpath,/opt/sw/petsc/PETScV2/lib -L/opt/sw/petsc/PETScV2/lib -Wl,-rpath,/usr/lib/gcc/x86_64-linux-gnu/13 -L/usr/lib/gcc/x86_64-linux-gnu/13 -lpetsc -lflapack -lfblas -lm -lX11 -lmpifort -lmpi -lgfortran -lm -lgfortran -lm -lgcc_s -lquadmath -lstdc++
+CIVL_INC = /opt/sw/petsc/include /opt/sw/petsc/PETScV2/include/petscconf.h
+DEBUG = -start_in_debugger
 
-test_ex1: ex1.exec
-	mpirun -np $(NP) gdb -ex run --args ./ex1.exec
-	mpiexec -n $(NP) xterm -e gdb ./ex1.exec
+all: testNormFrobenius testex34
 
-test_ex11: ex11.exec
-	mpirun -np $(NP) gdb -ex run --args ./ex11.exec
+testex34: ex34 runex34
 
-ex1.exec: ex1.o $(VEC)/petscvec.c  $(INC)/petscvec.h
-	$(MAKE) -C $(VEC)
-	$(CC) -o ex1.exec ex1.o $(VEC)/petscvec.o -lmpich -lm -lmpi
+runex34: ex34.exec
+	$(MPIEXEC) -n $(N) ./ex34.exec $(DEBUG)
 
-ex11.exec: ex11.o $(VEC)/petscvec.c $(INC)/petscvec.h
-	$(MAKE) -C $(VEC)
-	$(CC) -o ex11.exec ex11.o $(VEC)/petscvec.o -lmpich -lm -lmpi
+ex34: ex34.c $(INC)
+	$(CC) $(CCFLAGS) $(PETSC_CC_INCLUDES) ex34.c -L$(PETSC_WITH_EXTERNAL_LIB) -o ex34.exec
 
-ex1.o: ex1.c $(INC)/petscvec.h
-	$(CC) -I$(INC) -c ex1.c
+testex18: ex18 runex18
 
-ex11.o: ex11.c $(INC)/petscvec.h
-	$(CC) -I$(INC) -c ex11.c
+runex18: ex18.exec
+	$(MPIEXEC) -n $(N) ./ex18.exec $(DEBUG)
 
-verify_ex11: ex11.c $(VEC)/petscvec.c $(INC)/petscvec.h 
-	civl verify -sysIncludePath=$(INC) ex11.c $(VEC)/petscvec.c
+ex18: ex18.c $(INC)
+	$(CC) $(CCFLAGS) $(PETSC_CC_INCLUDES) ex18.c -L$(PETSC_WITH_EXTERNAL_LIB) -o ex18.exec
 
-verify_ex1: ex1.c $(VEC)/petscvec.c $(INC)/petscvec.h
-	civl verify -sysIncludePath=$(INC):$(CIVL) ex1.c $(VEC)/petscvec.c
+testex43: ex43 runex43
+
+runex43: ex43.exec
+	$(MPIEXEC) -n $(N) ./ex43.exec $(DEBUG)
+
+ex43: ex43.c $(INC)
+	$(CC) $(CCFLAGS) $(PETSC_CC_INCLUDES) ex43.c -L$(PETSC_WITH_EXTERNAL_LIB) -o VecOperations.exec
+
+testVecOperations: VecOperations runVecOperations
+
+runVecOperations: VecOperations.exec
+	$(MPIEXEC) -n $(N) ./VecOperations.exec $(DEBUG)
+
+VecOperations: VecOperations.c $(INC)
+	$(CC) $(CCFLAGS) $(PETSC_CC_INCLUDES) VecOperations.c -L$(PETSC_WITH_EXTERNAL_LIB) -o VecOperations.exec
+
+testNormFrobenius: NormFrobenius runNormFrobenius
+
+runNormFrobenius: NormFrobenius.exec
+	$(MPIEXEC) -n $(N) ./NormFrobenius.exec
+
+NormFrobenius: NormFrobenius.c $(INC)
+	$(CC) $(CCFLAGS) -I$(INC) NormFrobenius.c -L$(PETSC_WITH_EXTERNAL_LIB) -o NormFrobenius.exec
+
+verify: NormFrobenius.c $(INC)
+	civl verify -sysIncludePath=$(CIVL_INC) NormFrobenius.c
 
 clean:
-	rm -rf *.o *~ *.tmp *.exec CIVLREP
+	rm -f *~ *.o *.d *.exec
 
-clear:
-	clear
-
-.PHONY: all verify verify_ex11 verify_ex1 clean test test_ex1 test_ex11
+.PHONY: all testNormFrobenius testex34

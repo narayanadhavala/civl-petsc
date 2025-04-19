@@ -14,6 +14,8 @@ static inline PetscErrorCode VecMinMax_MPI_Default(
   if (PetscDefined(HAVE_MPIUNI))
     PetscFunctionReturn(PETSC_SUCCESS);
   /* Find the global max */
+  /* Change by Venkata: removed MPI_IN_PLACE reduction for MPI_REAL_INT as CIVL
+  doesn't support it */
   if (idx) {
     PetscReal local_val = *z;
     PetscReal global_val;

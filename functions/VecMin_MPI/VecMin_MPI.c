@@ -13,6 +13,8 @@ static inline PetscErrorCode VecMinMax_MPI_Default(
   PetscCall(VecMinMax_SeqFn(xin, idx, z));
   if (PetscDefined(HAVE_MPIUNI))
     PetscFunctionReturn(PETSC_SUCCESS);
+  /* Change by Venkata: removed MPI_IN_PLACE reduction for MPI_REAL_INT as CIVL
+   * doesn't support it */
   /* Find the global max */
   if (idx) {
     PetscReal local_val = *z;

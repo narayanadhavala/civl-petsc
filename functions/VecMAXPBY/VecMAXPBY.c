@@ -4,7 +4,8 @@
 PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
                          PetscScalar beta, Vec x[]) {
 #ifdef DEBUG
-  $print("Target VecMAXPBY: alpha[0]=", alpha[0]," beta=",beta," nv =",nv,"\n");
+  $print("Target VecMAXPBY: alpha[0]=", alpha[0], " beta=", beta, " nv =", nv,
+         "\n");
 #endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(y, VEC_CLASSID, 1);
@@ -24,7 +25,8 @@ PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
       PetscAssertPointer(alpha, 3);
       PetscAssertPointer(x, 5);
     }
-
+    /* Change by Venkata: replaced to avoid direct scalar operations and type
+     * casts, which CIVL doesn't support */
     for (PetscInt i = 0; i < nv; ++i) { // scan all alpha[]
       PetscValidLogicalCollectiveScalar(y, alpha[i], 3);
       PetscValidHeaderSpecific(x[i], VEC_CLASSID, 5);
@@ -52,11 +54,10 @@ PetscErrorCode VecMAXPBY(Vec y, PetscInt nv, const PetscScalar alpha[],
       PetscCall(VecLockReadPop(x[i]));
   } else { // no maxpby
            // used the scalar_eq to compare the complex & real numbers
-    if (scalar_eq(scalar_of(0.0), beta)) {
+    if (scalar_eq(scalar_of(0.0), beta))
       PetscCall(VecSet(y, scalar_of(0.0)));
-    } else {
+    else
       PetscCall(VecScale(y, beta));
-    }
     PetscCall(VecMAXPY(y, nv, alpha, x));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

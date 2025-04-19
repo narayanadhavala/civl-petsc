@@ -5,7 +5,8 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
                                      const PetscScalar alpha[], Vec x[],
                                      PetscDeviceContext dctx) {
 #ifdef DEBUG
-  $print("Target VecMAXPYAsync_Private: alpha[0]=", alpha[0]," nv =",nv,"\n");
+  $print("Target VecMAXPYAsync_Private: alpha[0]=", alpha[0], " nv =", nv,
+         "\n");
 #endif
   PetscFunctionBegin;
   PetscValidHeaderSpecific(y, VEC_CLASSID, 1);
@@ -15,6 +16,8 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
   PetscCheck(nv >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE,
              "Number of vectors (given %" PetscInt_FMT ") cannot be negative",
              nv);
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (nv) {
     PetscInt zeros = 0;
 
@@ -32,7 +35,6 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
                  i);
       VecCheckAssembled(x[i]);
       PetscCall(VecLockReadPush(x[i]));
-      // changed to $scalar_eq for scalar comparision
       zeros += scalar_eq(alpha[i], scalar_zero);
     }
 
@@ -55,7 +57,7 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv,
 PetscErrorCode VecMAXPY(Vec y, PetscInt nv, const PetscScalar alpha[],
                         Vec x[]) {
 #ifdef DEBUG
-  $print("Target VecMAXPY: alpha[0]=", alpha[0]," nv =",nv,"\n");
+  $print("Target VecMAXPY: alpha[0]=", alpha[0], " nv =", nv, "\n");
 #endif
   PetscFunctionBegin;
   PetscCall(VecMAXPYAsync_Private(y, nv, alpha, x, NULL));

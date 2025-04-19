@@ -18,16 +18,16 @@ PetscErrorCode VecAXPBYAsync_Private(Vec y, PetscScalar alpha, PetscScalar beta,
   VecCheckAssembled(y);
   PetscValidLogicalCollectiveScalar(y, alpha, 2);
   PetscValidLogicalCollectiveScalar(y, beta, 3);
-  //used the scalar_eq to compare the complex & real numbers
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(scalar_of(0.0), alpha) && scalar_eq(scalar_of(1.0), beta))
     PetscFunctionReturn(PETSC_SUCCESS);
   if (x == y) {
-    // used the scalar_add to add two complex numbers
     PetscCall(VecScale(y, scalar_add(alpha, beta)));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  // PetscCall(VecSetErrorIfLocked(y, 1));
+  PetscCall(VecSetErrorIfLocked(y, 1));
   PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(VEC_AXPY, y, x, 0, 0));
   VecMethodDispatch(y, dctx, VecAsyncFnName(AXPBY), axpby,

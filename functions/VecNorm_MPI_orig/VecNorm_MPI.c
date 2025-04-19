@@ -25,7 +25,8 @@ static inline PetscErrorCode VecNorm_MPI_Default(
     op = MPIU_MAX;
     break;
   }
-  // attempt to read/write a non-concrete pointer type variable
+  /* Change by Venkata: removed MPI_IN_PLACE reduction for MPI_REAL type struct
+   * as CIVL doesn't support it */
   {
     PetscReal tmp[zn];
     PetscCall(MPIU_Allreduce(z, tmp, zn, MPIU_REAL, op,

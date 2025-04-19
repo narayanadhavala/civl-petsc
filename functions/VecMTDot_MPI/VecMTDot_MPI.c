@@ -7,6 +7,8 @@ static inline PetscErrorCode VecMXDot_MPI_Default(
                                      PetscScalar *)) {
   PetscFunctionBegin;
   PetscCall(VecMXDot_SeqFn(xin, nv, y, z));
+  /* Change by Venkata: removed MPI_IN_PLACE reduction for MPI_SCALAR as CIVL
+   *doesn't support it */
 #ifdef USE_COMPLEX
   double in_real[nv], in_imag[nv], out_real[nv], out_imag[nv];
   // Separate real and imaginary parts

@@ -16,14 +16,14 @@ PetscErrorCode VecAYPXAsync_Private(Vec y, PetscScalar beta, Vec x,
   VecCheckAssembled(x);
   VecCheckAssembled(y);
   PetscValidLogicalCollectiveScalar(y, beta, 2);
-  // PetscCall(VecSetErrorIfLocked(y, 1));
+  PetscCall(VecSetErrorIfLocked(y, 1));
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (x == y) {
-    // used the scalar_add to add two complex numbers
     PetscCall(VecScale(y, scalar_add(beta, scalar_of(1))));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(VecLockReadPush(x));
-  // used the scalar_eq to compare the complex & real numbers
   if (scalar_eq(scalar_of(0.0), beta)) {
     PetscCall(VecCopy(x, y));
   } else {

@@ -9,10 +9,7 @@ VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecNorm_MPI=VecNorm_MPI_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
-all: ver2r ver2c
-
-VecNorm_MPI.o: VecNorm_MPI.c $(INC)/petscvec.h $(PETSC)
-	$(CC) $(TYPE) -DVecNorm_MPI=VecNorm_MPI_spec -I$(INC) -I$(PETSC) -c VecNorm_MPI.c
+small: ver2r ver2c
 
 ver2r: $(DEPS)
 	$(VERIFYR) -DDEBUG -input_mpi_nprocs=2 -inputN_MIN=2 -inputN_MAX=3 $(MODSR)

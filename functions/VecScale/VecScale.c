@@ -14,8 +14,9 @@ PetscErrorCode VecScaleAsync_Private(Vec x, PetscScalar alpha,
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidType(x, 1);
   VecCheckAssembled(x);
-  // PetscCall(VecSetErrorIfLocked(x, 1));
-  // used the scalar_eq to compare the complex & real numbers
+  PetscCall(VecSetErrorIfLocked(x, 1));
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(scalar_of(1), alpha))
     PetscFunctionReturn(PETSC_SUCCESS);
 

@@ -61,6 +61,7 @@ int main(void) {
   PetscErrorCode err_actual = VecMAXPY(p_y, NV, alpha, p_x);
 
   $assert(err_actual == 0);
+  $print("\nDEBUG: Rank = ", rank,", Actual  : ", p_y, ", Expected: ", expectedMAXPY, "\n");
 #ifdef DEBUG
   CIVL_PrintVec("Actual  ", p_y);
   CIVL_PrintVec("Expected", expectedMAXPY);

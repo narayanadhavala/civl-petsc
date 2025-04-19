@@ -8,7 +8,7 @@ PetscErrorCode VecSetAsync_Private(Vec x, PetscScalar alpha,
   PetscValidType(x, 1);
   VecCheckAssembled(x);
   PetscValidLogicalCollectiveScalar(x, alpha, 2);
-  // PetscCall(VecSetErrorIfLocked(x, 1));
+  PetscCall(VecSetErrorIfLocked(x, 1));
 
   if (PetscRealPart(alpha) == 0) {
     PetscReal norm;

@@ -6,11 +6,12 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha) {
   PetscScalar *xx;
 
 #ifdef DEBUG
-  $print("DEBUG: Target VecSet_Seq called. alpha =",alpha,"\n");
+  $print("DEBUG: Target VecSet_Seq called. alpha =", alpha, "\n");
 #endif
   PetscFunctionBegin;
   PetscCall(VecGetArrayWrite(xin, &xx));
-  // if (alpha == (PetscScalar)0.0)
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(alpha, scalar_zero))
     PetscCall(PetscArrayzero(xx, n));
   else

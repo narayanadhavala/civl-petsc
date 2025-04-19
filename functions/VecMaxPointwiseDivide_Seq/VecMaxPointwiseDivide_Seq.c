@@ -13,9 +13,8 @@ PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max) {
   PetscCall(VecGetArrayRead(xin, &xx));
   PetscCall(VecGetArrayRead(yin, &yy));
   for (PetscInt i = 0; i < n; ++i) {
-    /*     const PetscReal v = PetscAbsScalar(
-            scalar_eq(yy[i], scalar_zero) ? xx[i] : scalar_div(xx[i], yy[i]));
-     */
+    /* Change by Venkata: replaced to avoid direct scalar operations and type
+     * casts, which CIVL doesn't support */
     const PetscReal v = scalar_eq(yy[i], scalar_zero)
                             ? PetscAbsScalar(xx[i])
                             : PetscAbsScalar(scalar_div(xx[i], yy[i]));

@@ -1,5 +1,24 @@
 #ifndef _PETSCVEC_H
 #define _PETSCVEC_H
+
+/*
+ * Filename : petscvec.h
+ * Author   : Venkata Dhavala
+ * Created  : 2024-03-22
+ * Modified : 2025-04-13
+ *
+ * This header file declares the interfaces for PETSc vector operations,
+ * providing the function prototypes, macros, and data structure definitions
+ * necessary for the PETSc vector functionality.
+ *
+ * It includes:
+ *   - Stub function declarations for key PETSc vector operations.
+ *   - Integration points for BLAS routines to support common vector
+ * computations.
+ *   - CIVL-specific declarations to facilitate the bridging of PETSc vectors
+ *     with CIVL data types.
+ */
+
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -149,26 +168,6 @@ typedef struct map_s {
   PetscInt bs;           // for now assuming the block size as 1
   PetscInt nproc;
 } *SimpleMap;
-
-typedef struct _p_IS *IS;
-
-/* IS - Abstract PETSc object used for efficient indexing into vector and
- * matrices */
-struct _p_IS {
-  PETSCHEADER(struct _ISOps);
-  SimpleMap map;
-  PetscInt max, min; /* range of possible values */
-  void *data;
-  PetscInt *total, *nonlocal; /* local representation of ALL indices across the
-                                 comm as well as the nonlocal part. */
-  PetscInt
-      local_offset; /* offset to the local part within the total index set */
-  IS complement;    /* IS wrapping nonlocal indices. */
-  PetscBool info_permanent[2][IS_INFO_MAX]; /* whether local / global properties
-                                               are permanent */
-  ISInfoBool info[2][IS_INFO_MAX];          /* local / global properties */
-  MPI_Comm comm;
-};
 
 // Now we can define Vec_s using PETSCHEADER
 typedef struct Vec_s {
@@ -398,10 +397,6 @@ typedef enum INSERT_MODE {
    - Extracted from petscvec.h*/
 #define VEC_CLASSID 123
 
-/* A unique id used to identify for IS class.
-   - Extracted from petscvec.h*/
-#define IS_CLASSID 124
-
 PetscErrorCode PetscError(MPI_Comm comm, int line, const char *func,
                           const char *file, PetscErrorCode n, int p,
                           const char *mess, ...);
@@ -550,9 +545,9 @@ PetscErrorCode PetscInfo_Private(PetscObject obj, const char message[]);
 
 int __isfinited(double x);
 
-/* $Scalar_Bcast - Broadcasts a PetscScalar value across processes in an MPI
-  communicator.*/
-void $Scalar_Bcast(PetscScalar *val, int count, int root, MPI_Comm comm);
+/* CIVL_Scalar_Bcast - Broadcasts a PetscScalar value across processes in an MPI
+  communicator. */
+void CIVL_Scalar_Bcast(PetscScalar *val, int count, int root, MPI_Comm comm);
 
 #define VecCheckAssembled(a) ((void)0)
 
@@ -605,14 +600,6 @@ void $Scalar_Bcast(PetscScalar *val, int count, int root, MPI_Comm comm);
 #define PETSC_EXTERN_TLS PETSC_EXTERN
 
 typedef int PetscLogEvent;
-
-/*   PetscIsInfReal - Checks if a given PetscReal value is infinite.
-  - Extracted from petscmath.h */
-PetscBool PetscIsInfReal(PetscReal a);
-
-/*   PetscIsNanReal - Checks if a given PetscReal value is NaN (Not a Number).
-  - Extracted from petscmath.h */
-PetscBool PetscIsNanReal(PetscReal a);
 
 /*   PetscIsInfOrNanReal - Checks if a given PetscReal value is either infinite
   or NaN.
@@ -1230,59 +1217,6 @@ PetscErrorCode VecSetSizes(Vec v, PetscInt n, PetscInt N);
   - URL: https://petsc.org/release/manualpages/Vec/VecSetUp/#vecsetup
 */
 PetscErrorCode VecSetUp(Vec v);
-
-/*
-  VecGetSubVector - Extracts a subvector from a given vector based on an index
-  set.
-
-  Parameters:
-  - X  Input vector.
-  - is Index set defining the portion of `X` to extract.
-  - Y  Output subvector.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Note: Converts `X` to `$vec`, extracts the required subsequence using
-  `$vec_subseq`, and converts the result back to a PETSc `Vec` using
-  `CIVL_CivlToPetscVecCopy`.
-  - Extracted from petscvec.h
-  - URL:
-  https://petsc.org/release/manualpages/Vec/VecGetSubVector/#vecgetsubvector
- */
-PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y);
-
-/*
-  VecRestoreSubVector - Restores a subvector obtained using VecGetSubVector.
-
-  Parameters:
-  - X  Original vector from which the subvector was obtained.
-  - is Index set representing the subset of `X`.
-  - Y  Subvector to be restored.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Note: If the subvector's state has not changed, this function simply destroys
-  it.
-  - Extracted from petscvec.h
-  - URL:
-  https://petsc.org/release/manualpages/Vec/VecRestoreSubVector/#vecrestoresubvector
- */
-PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y);
-
-/*
-  ISDestroy - Destroys an index set and deallocates its resources.
-
-  Parameters:
-  - is The index set to be destroyed.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Note: This function frees the allocated memory for index sets, including
-        local and nonlocal arrays.
-  - Extracted from petsccis.h
-  - URL: https://petsc.org/release/manualpages/IS/ISDestroy/#isdestroy
- */
-PetscErrorCode ISDestroy(IS *is);
 
 /*
   Sets the block size of a vector.
@@ -2598,100 +2532,6 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec x, PetscInt ni, const PetscInt ix[],
                                        const PetscScalar y[], InsertMode iora);
 
 /*
-  ISCreateGeneral - Creates an index set from an array of integers.
-
-  Parameters:
-  - comm  The MPI communicator.
-  - n     The number of indices.
-  - idx   The array of indices.
-  - mode  Copy mode (`PETSC_COPY_VALUES`, `PETSC_OWN_POINTER`, or
-  `PETSC_USE_POINTER`).
-  - is    The newly created index set.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Note: This function allocates and initializes an `IS` structure.
-  - Extracted from petscis.h
-  - URL:
-  https://petsc.org/release/manualpages/IS/ISCreateGeneral/#iscreategeneral
- */
-PetscErrorCode ISCreateGeneral(MPI_Comm comm, PetscInt n, const PetscInt idx[],
-                               PetscCopyMode mode, IS *is);
-
-/*
-  Returns the global length of an index set.
-
-  Parameters:
-  - is: The index set.
-  - size: Pointer to store the global size of the index set.
-
-  Returns:
-  - PetscErrorCode: 0 on success, non-zero on failure.
-
-  Note: This function is not collective and can be called independently by each
-  process.
-  - Extracted from petscis.h
-  - URL:
-  https://petsc.org/release/manualpages/IS/ISGetSize/#isgetsize
- */
-PetscErrorCode ISGetSize(IS is, PetscInt *size);
-/*
-  Creates a data structure for an index set containing a list of evenly
-  spaced integers.
-
-  Parameters:
-  - comm: the MPI communicator.
-  - n: the length of the locally owned portion of the index set.
-  - first: the first element of the locally owned portion of the index set.
-  - step: the change to the next index.
-  - is: the new index set.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-  - Extracted from petscis.h
-  - URL: https://petsc.org/release/manualpages/IS/ISCreateStride/#iscreatestride
-*/
-PetscErrorCode ISCreateStride(MPI_Comm comm, PetscInt n, PetscInt first,
-                              PetscInt step, IS *is);
-
-/*
-  Returns the local (processor) length of an index set.
-
-  Parameters:
-  - is: The index set.
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-
-  Output:
-  - size: The local size.
-
-  - Extracted from petscis.h
-  - URL: https://petsc.org/release/manualpages/IS/ISGetLocalSize/#isgetlocalsize
-  */
-PetscErrorCode ISGetLocalSize(IS is, PetscInt *size);
-
-/*
-  Creates a new vector that is a vertical concatenation of all the given array
-  of vectors in the order they appear in the array. The concatenated vector
-  resides on the same communicator and is the same type as the source vectors.
-
-  Parameters:
-  - nx: Number of vectors to be concatenated.
-  - X: Array containing the vectors to be concatenated in the order of
-  concatenation.
-
-  Output Parameters:
-  - Y: Concatenated vector.
-  - x_is: Array of index sets corresponding to the concatenated components of Y
-  (pass NULL if not needed).
-
-  Returns: PetscErrorCode (0 on success, non-zero on failure).
-  - Extracted from petscvec.h
-  - URL:
-  https://petsc.org/release/manualpages/Vec/VecConcatenate/#vecconcatenate
- */
-PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[]);
-
-/*
   Retrieves values from specified locations of a PETSc vector.
 
   Parameters:
@@ -2994,8 +2834,6 @@ struct _VecOps {
                           Vec *); // y = y + alpha[j] x[j]
   PetscErrorCode (*maxpby)(Vec, PetscInt, const PetscScalar *, PetscScalar,
                            Vec *); // y = beta y + alpha[j] x[j]
-  PetscErrorCode (*concatenate)(PetscInt, const Vec[], Vec *, IS *[]);
-  PetscErrorCode (*getsubvector)(Vec, IS, Vec *);
   PetscErrorCode (*restorearray)(Vec, PetscScalar **); /* restore data array */
   PetscErrorCode (*restorearraywrite)(Vec, PetscScalar **);
   PetscErrorCode (*getarraywrite)(Vec, PetscScalar **);

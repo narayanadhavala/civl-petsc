@@ -30,7 +30,8 @@ PetscErrorCode VecWAXPYAsync_Private(Vec w, PetscScalar alpha, Vec x, Vec y,
 
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
-  // used the scalar_eq to compare the complex & real numbers
+  /* Change by Venkata: replaced to avoid direct scalar operations and type
+   * casts, which CIVL doesn't support */
   if (scalar_eq(scalar_of(0), alpha)) {
     PetscCall(VecCopyAsync_Private(y, w, dctx));
   } else {
