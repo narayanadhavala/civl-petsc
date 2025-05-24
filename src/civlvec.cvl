@@ -1,0 +1,189 @@
+#include "civlvec.cvh"
+#include <math.h>
+#include <seq.cvh>
+#include <stdio.h>
+#include <stdlib.h>
+
+$vec $vec_make_from_dense(int len, STYPE *vals) {
+  $vec result;
+  result.len = len;
+  if (len == 0)
+    $seq_init(&result.data, 0, NULL);
+  else
+    result.data = (STYPE[len])$lambda(int i) vals[i];
+  return result;
+}
+
+$vec $vec_zero(int len) {
+  $vec result;
+  result.len = len;
+  STYPE zero = scalar_zero;
+  if (len == 0)
+    $seq_init(&result.data, 0, NULL);
+  else
+    result.data = (STYPE[len])$lambda(int i) zero;
+  return result;
+}
+
+int $vec_len($vec vec) { return vec.len; }
+
+STYPE $vec_ith($vec vec, int i) {
+  $assert(i >= 0 && i < vec.len, "Index out of bounds");
+  return vec.data[i];
+}
+
+void $vec_print($vec vec) {
+  int n = vec.len;
+  printf("{ ");
+  for (int i = 0; i < n; i++) {
+    if (i > 0)
+      printf(", ");
+    scalar_print(vec.data[i]);
+  }
+  printf(" }\n");
+}
+
+_Bool $vec_eq($vec v1, $vec v2) {
+  if (v1.len != v2.len)
+    return $false;
+  return $forall(int i : 0..(v1.len - 1)) scalar_eq(v1.data[i], v2.data[i]);
+}
+
+$vec $vec_set($vec vec, int i, STYPE x) {
+  $assert(i >= 0 && i < vec.len, "Index out of bounds");
+  $vec result;
+  result.len = vec.len;
+  result.data = (STYPE[vec.len])$lambda(int j) j == i ? x : vec.data[j];
+  return result;
+}
+
+$vec $vec_concat($vec vec1, $vec vec2) {
+  int newLen = vec1.len + vec2.len;
+  $vec result;
+  result.len = newLen;
+  result.data = (STYPE[newLen])$lambda(int i) i < vec1.len
+                    ? vec1.data[i]
+                    : vec2.data[i - vec1.len];
+  return result;
+}
+
+$vec $vec_copy($vec vec1, $vec vec2) {
+  $assert(vec1.len == vec2.len, "Vector length mismatch");
+  int N = vec1.len;
+  for (int i = 0; i < N; i++)
+    vec2.data[i] = vec1.data[i];
+  return vec2;
+}
+
+$vec $vec_subseq($vec vec, int first, int n) {
+  $assert(first >= 0 && first + n <= vec.len, "Invalid subsequence range");
+  $vec result;
+  result.len = n;
+  result.data = (STYPE[n])$lambda(int i) vec.data[first + i];
+  return result;
+}
+
+CIVL_RTYPE $vec_norm($vec vec, int p) {
+  CIVL_RTYPE result = 0;
+  if (p == $norm_infty) {
+    for (int i = 0; i < vec.len; i++) {
+      CIVL_RTYPE abs_val = scalar_abs(vec.data[i]);
+      /* using the ternary operator there is a single path and simple path condition 
+      but symbolic expression stored in result is large and complex. In our experiments, 
+      this way is approximatly twice as fast */
+      result = abs_val > result ? abs_val : result;
+      // if (abs_val > result) result = abs_val;
+    }
+  } else if (p == 1) {
+    for (int i = 0; i < vec.len; i++)
+      result += scalar_abs(vec.data[i]);
+  } else if (p == 2) {
+    for (int i = 0; i < vec.len; i++)
+      result += scalar_abs(vec.data[i]) * scalar_abs(vec.data[i]);
+    result = sqrt(result);
+  } else if (p > 0) {
+    for (int i = 0; i < vec.len; i++)
+      result += $pow(scalar_abs(vec.data[i]), p);
+    result = $pow(result, 1.0 / (double)p);
+  } else {
+    $assert(0, "Invalid norm type");
+    return 0;
+  }
+  return result;
+}
+
+STYPE $vec_dot($vec vec1, $vec vec2) {
+  $assert(vec1.len == vec2.len, "Invalid vector length");
+  STYPE result = scalar_zero;
+  for (int i = 0; i < vec1.len; i++) {
+    result =
+        scalar_add(result, scalar_mul(vec1.data[i], scalar_conj(vec2.data[i])));
+  }
+  return result;
+}
+
+$vec $vec_add($vec vec1, $vec vec2) {
+  int n = vec1.len;
+  $assert(n == vec2.len, "Invalid vector length");
+  $vec result;
+  result.len = n;
+  for (int i = 0; i < n; i++)
+    result.data[i] = scalar_add(vec1.data[i], vec2.data[i]);
+  return result;
+}
+
+$vec $vec_sub($vec vec1, $vec vec2) {
+  int n = vec1.len;
+  $assert(n == vec2.len, "Invalid vector length");
+  $vec result;
+  result.len = n;
+  for (int i = 0; i < n; i++)
+    result.data[i] = scalar_sub(vec1.data[i], vec2.data[i]);
+  return result;
+}
+
+$vec $vec_scalar_mul(STYPE a, $vec vec) {
+  $vec result;
+  result.len = vec.len;
+  for (int i = 0; i < vec.len; i++)
+    result.data[i] = scalar_mul(a, vec.data[i]);
+  return result;
+}
+
+void $vec_max($vec vec, CIVL_RTYPE *max, int *index) {
+  if (vec.len == 0) {
+    if (index)
+      *index = -1;
+    return;
+  }
+  int idx = 0;
+  CIVL_RTYPE currentMax = scalar_real(vec.data[0]);
+  for (int i = 1; i < vec.len; i++) {
+    CIVL_RTYPE val = scalar_real(vec.data[i]);
+    if (val > currentMax) {
+      currentMax = val;
+      idx = i;
+    }
+  }
+  *max = currentMax;
+  *index = idx;
+}
+
+void $vec_min($vec vec, CIVL_RTYPE *min, int *index) {
+  if (vec.len == 0) {
+    if (index)
+      *index = -1;
+    return;
+  }
+  int idx = 0;
+  CIVL_RTYPE currentMin = scalar_real(vec.data[0]);
+  for (int i = 1; i < vec.len; i++) {
+    CIVL_RTYPE val = scalar_real(vec.data[i]);
+    if (val < currentMin) {
+      currentMin = val;
+      idx = i;
+    }
+  }
+  *min = currentMin;
+  *index = idx;
+}

@@ -1,0 +1,56 @@
+#include <math.h>
+#include <mpi.h>
+#include <petscvec.h>
+#include <stdio.h>
+#undef VecMaxPointwiseDivide
+PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE X_Real[N], Y_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N];
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
+  MPI_Comm_rank(comm, &rank);
+  // Vectors x and y
+  $vec x = $vec_zero(N), y = $vec_zero(N);
+  if (rank == 0) {
+    STYPE x_values[N], y_values[N];
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
+    }
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+    $print("\nVecMaxPointwiseDivide_MPI_driver: nproc=", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+    $print("\ny: ");
+    $vec_print(y);
+#endif
+  }
+  CIVL_RTYPE max_actual, max_expected;
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  VecMaxPointwiseDivide_spec(p_x, p_y, &max_expected);
+  PetscErrorCode err_actual = VecMaxPointwiseDivide(p_x, p_y, &max_actual);
+  $assert(err_actual == 0);
+  if (rank == 0) {
+#ifdef DEBUG
+    $pathCondition();
+    $print("\nActual   = ", max_actual, "\n\nExpected = ", max_expected, "\n");
+#endif
+    $assert(max_actual == max_expected);
+    $print(" ok ");
+  }
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  MPI_Finalize();
+}

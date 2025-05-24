@@ -1,0 +1,65 @@
+#include <math.h>
+#include <mpi.h>
+#include <petscvec.h>
+#include <stdio.h>
+#undef VecPointwiseMult
+PetscErrorCode VecPointwiseMult(Vec w, Vec x, Vec y);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE X_Real[N], Y_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N];
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
+  MPI_Comm_rank(comm, &rank);
+  // Vectors x and y
+  $vec x = $vec_zero(N), y = $vec_zero(N), w = $vec_zero(N);
+  if (rank == 0) {
+    STYPE x_values[N], y_values[N];
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
+    }
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+    $print("\nVecPointwiseMult_driver: nproc = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+    $print("\ny: ");
+    $vec_print(y);
+    $print("\nw: ");
+    $vec_print(w);
+#endif
+  }
+  CIVL_RTYPE max_actual, max_expected;
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual_w = CIVL_CivlToPetscVec(w, PETSC_DECIDE, comm);
+  Vec expected_w = CIVL_CivlToPetscVec(w, PETSC_DECIDE, comm);
+  VecPointwiseMult_spec(actual_w, p_x, p_y);
+  PetscErrorCode err_actual = VecPointwiseMult(expected_w, p_x, p_y);
+  $assert(err_actual == 0);
+#ifdef DEBUG
+    CIVL_PrintVec("Actual   = ", actual_w);
+    CIVL_PrintVec("Expected = ", expected_w);
+#endif
+  bool flg;
+  VecEqual(actual_w, expected_w, &flg);
+  $assert(flg, "VecPointwiseMult mismatch between actual and expected results.");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  VecDestroy(&actual_w);
+  VecDestroy(&expected_w);
+  MPI_Finalize();
+}

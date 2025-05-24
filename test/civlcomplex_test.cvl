@@ -1,0 +1,115 @@
+#include "civlcomplex.cvh"
+#include <stdio.h>
+#include <math.h>
+
+$input CIVL_RTYPE X1, X2, Y1, Y2;
+
+void test_make_complex() {
+  $complex c1 = $make_complex(1.0, 2.0);
+  $complex c2 = $make_complex(X1, X2);
+  $print("Concerte Complex: ");
+  $cprint(c1);
+  $print("\n");
+  $print("Symbolic Complex: ");
+  $cprint(c2);
+  $print("\n");
+  $assert(c1.real == 1.0 && c1.imag == 2.0);
+  $assert(c2.real == X1 && c2.imag == X2);
+}
+
+void test_cadd() {
+  $complex c1 = $make_complex(1.0, 2.0), c2 = $make_complex(3.0, 4.0);
+  $complex result = $cadd(c1, c2);
+  $assert(result.real == 4.0 && result.imag == 6.0);
+  c1 = $make_complex(X1, X2), c2 = $make_complex(Y1, Y2);
+  result = $cadd(c1, c2);
+  $print("Complex Add: ");
+  $cprint(result);
+  $print("\n");
+  $assert(result.real == X1 + Y1 && result.imag == X2 + Y2);
+}
+
+void test_csub() {
+  $complex c1 = $make_complex(X1, X2), c2 = $make_complex(Y1, Y2);
+  $complex result = $csub(c1, c2);
+  $assert(result.real == X1 - Y1 && result.imag == X2 - Y2);
+  $print("Complex Sub: ");
+  $cprint(result);
+  $print("\n");
+}
+
+void test_cmul() {
+  $complex c1 = $make_complex(X1, X2), c2 = $make_complex(Y1, Y2);
+  $complex result = $cmul(c1, c2);
+  $assert(result.real == X1 * Y1 - X2 * Y2 && result.imag == X1 * Y2 + X2 * Y1);
+  $print("Complex Mul: ");
+  $cprint(result);
+  $print("\n");
+}
+
+void test_cdiv() {
+  $complex c1 = $make_complex(X1, X2), c2 = $make_complex(Y1, Y2);
+  // $assume(!$ceq(c2, $czero));
+  $assume(Y1 * Y1 + Y2 * Y2 != 0.0);
+  $complex result = $cdiv(c1, c2);
+  CIVL_RTYPE denom = Y1 * Y1 + Y2 * Y2;
+  if (denom == 0.0) {
+    $assert(result.real == 0.0);
+    $assert(result.imag == 0.0);
+  } else {
+    $assert(result.real == (X1 * Y1 + X2 * Y2) / denom);
+    $assert(result.imag == (X2 * Y1 - X1 * Y2) / denom);
+  }
+  $print("Complex Division: ");
+  $cprint(result);
+  $print("\n");
+}
+
+void test_conj() {
+  $complex c = $make_complex(X1, X2);
+  $complex result = $conj(c);
+  $assert(result.real == X1);
+  $assert(result.imag == -X2);
+  $print("Complex Conjugate: ");
+  $cprint(result);
+  $print("\n");
+}
+
+void test_cabs() {
+  $complex c = $make_complex(X1, X2);
+  CIVL_RTYPE magnitude = $cabs(c);
+  $assert(magnitude == sqrt(X1 * X1 + X2 * X2));
+  $print("Complex abs: ");
+  $print(magnitude, "\n");  
+}
+
+void test_creal() {
+  $complex c = $make_complex(X1, X2);
+  CIVL_RTYPE real_part = $creal(c);
+  $assert(real_part == X1);
+}
+
+void test_cprint() {
+  $complex c = $make_complex(X1, X2);
+  $print("Complex Print: ");
+  $cprint(c); // Outputs the complex number
+  $print("\n");
+}
+
+void test_ceq() {
+  $complex c1 = $make_complex(X1, X2), c2 = $make_complex(Y1, Y2);
+  (X1 != Y1 || X2 != Y2) ? $assert(!$ceq(c1, c2)):$assert($ceq(c1, c2));
+}
+
+int main(void) {
+  test_make_complex();
+  test_cadd();
+  test_csub();
+  test_cmul();
+  test_cdiv();
+  test_conj();
+  test_cabs();
+  test_creal();
+  test_cprint();
+  test_ceq();
+}

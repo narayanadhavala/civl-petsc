@@ -1,0 +1,45 @@
+#include "petscvec.h"
+#undef VecGetSize_MPI
+PetscErrorCode VecGetSize_MPI(Vec x, PetscInt *size);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE X_Real[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N];
+#endif
+
+int main() {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, nprocs, actual_size, expected_size;
+  STYPE x_values[N];
+  MPI_Comm_size(comm, &nprocs);
+  MPI_Comm_rank(comm, &rank);
+  $vec x = $vec_zero(N);
+  if (rank == 0) {
+    $print("\nVecGetSize_MPI_driver: nproc = ", nprocs,", N = ", N, " ...");
+    for (int i = 0; i < N; i++)
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+    x = $vec_make_from_dense(N, x_values);
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+#endif
+  }
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  VecGetSize_MPI_spec(p_x, &expected_size);
+  PetscErrorCode err_actual = VecGetSize_MPI(p_x, &actual_size);
+  $assert(err_actual == 0);
+#ifdef DEBUG
+  if (rank == 0)
+    $print("Expected_size = ", expected_size, "\nActual_size   = ", actual_size, "\n");
+#endif
+  $assert(actual_size == N && expected_size == N);
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
+  VecDestroy(&p_x);
+  MPI_Finalize();
+}

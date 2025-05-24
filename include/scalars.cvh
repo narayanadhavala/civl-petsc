@@ -1,0 +1,43 @@
+#ifndef _SCALARS_CVH
+#define _SCALARS_CVH
+#ifndef CIVL_RTYPE
+#define CIVL_RTYPE double
+#endif
+#ifdef CIVL_COMPLEX
+#include "civlcomplex.cvh"
+#define STYPE $complex
+#define scalar_zero $czero
+#define scalar_real(x) ((x).real)
+#define scalar_imag(x) ((x).imag)
+#define scalar_eq(x, y) $ceq(x, y)
+#define scalar_add(x, y) $cadd(x, y)
+#define scalar_mul(x, y) $cmul(x, y)
+#define scalar_sub(x, y) $csub(x, y)
+#define scalar_div(x, y) $cdiv(x, y)
+#define scalar_max(x, y) $cmax(x, y)
+#define scalar_min(x, y) $cmin(x, y)
+#define scalar_conj(x) $conj(x)
+#define scalar_of(x) (($complex){x, 0.0}) // makes a scalar with imag = 0.0
+#define scalar_make(x, y) ($complex) { x, y }  // makes a scalar with imag
+#define scalar_abs(x) $cabs(x)
+#define scalar_print(x) $cprint(x)
+#else
+#include <math.h>
+#define STYPE CIVL_RTYPE
+#define scalar_zero 0.0
+#define scalar_real(x) (x)
+#define scalar_imag(x) (0.0)
+#define scalar_eq(x, y) ((x) == (y))
+#define scalar_add(x, y) ((x) + (y))
+#define scalar_mul(x, y) ((x) * (y))
+#define scalar_sub(x, y) ((x) - (y))
+#define scalar_div(x, y) ((x) / (y))
+#define scalar_max(x, y) ((x) > (y) ? (x) : (y))
+#define scalar_min(x, y) ((x) < (y) ? (x) : (y))
+#define scalar_conj(x) (x)
+#define scalar_of(x) (x)
+#define scalar_make(x, y) (x)
+#define scalar_abs(x) fabs(x)
+#define scalar_print(x) $print(x)
+#endif
+#endif

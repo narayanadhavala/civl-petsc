@@ -1,0 +1,41 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <scalars.cvh>
+#include <stdio.h>
+#include <stdlib.h>
+
+$input int N_MIN = 1, N_MAX = 3, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE A_Real;
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE A_Imag;
+#endif
+
+int main(void) {
+  STYPE value[N];
+  $elaborate(N);
+  int rank, size;
+  $vec x = $vec_zero(N);
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  if (rank == 0) {
+    for (int i = 0; i < N; i++)
+      value[i] = scalar_make(A_Real, A_Imag);
+    $print("No.of procs: ", size, ", N = ", N);
+    x = $vec_make_from_dense(N, value);
+  }
+
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  CIVL_PrintVec("PETSc vectr", p_x);
+  $vec c_x = CIVL_PetscToCivlVec(p_x);
+  if (rank == 0) {
+    $print("CIVL Vector: ");
+    $vec_print(c_x);
+    $assert($vec_eq(x, c_x));
+    $print("\n");
+  }
+  VecDestroy(&p_x);
+  MPI_Finalize();
+}

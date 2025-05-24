@@ -1,0 +1,66 @@
+#include "petscvec.h"
+#undef VecSwap
+PetscErrorCode VecSwap(Vec x, Vec y);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+$input CIVL_RTYPE X_Real[N], Y_REAL[N];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N];
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
+  MPI_Comm_rank(comm, &rank);
+  $vec x = $vec_zero(N), y = $vec_zero(N);
+  STYPE x_values[N], y_values[N];
+  if (rank == 0) {
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_REAL[i], Y_Imag[i]);
+    }
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+    $print("\nVecSwap_driver: nprocs = ", size, ", N = ", N, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+    $print("y: ");
+    $vec_print(y);
+#endif
+  }
+  Vec Actual_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec Actual_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec Expected_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec Expected_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+
+  VecSwap_spec(Expected_x, Expected_y);
+  MPI_Barrier(comm);
+  PetscErrorCode err_actual = VecSwap(Actual_x, Actual_y);
+  $assert(err_actual == 0);
+#ifdef DEBUG
+  if (rank == 0) $print("\nVec after swap by Target code: ");
+  CIVL_PrintVec("x", Actual_x);
+  CIVL_PrintVec("y", Actual_y);
+  if (rank == 0) $print("\nVec after swap by Spec code: ");
+  CIVL_PrintVec("x", Expected_x);
+  CIVL_PrintVec("y", Expected_y);
+#endif
+  bool x_flg, y_flg;
+  VecEqual(Actual_x, Expected_x, &x_flg);
+  VecEqual(Actual_y, Expected_y, &y_flg);
+  $assert(x_flg && y_flg, "VecSwap mismatch between actual and expected results.");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
+  VecDestroy(&Actual_x);
+  VecDestroy(&Actual_y);
+  VecDestroy(&Expected_x);
+  VecDestroy(&Expected_y);
+  MPI_Finalize();
+}

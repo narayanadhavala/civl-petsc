@@ -1,0 +1,81 @@
+#include "petscvec.h"
+#undef VecMAXPY
+PetscErrorCode VecMAXPY(Vec y, PetscInt nv, const PetscScalar alpha[], Vec x[]);
+
+$input int N_MIN, N_MAX, N, NV, NV_MAX = 3;
+$assume(N_MIN <= N && N <= N_MAX);
+$assume(1 <= NV && NV <= NV_MAX);
+
+$input CIVL_RTYPE X_Real[NV][N], Y_Real[N], alpha_Real[NV];
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[NV][N], Y_Imag[N], alpha_Imag[NV];
+#endif
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, size;
+  MPI_Comm_size(comm, &size);
+  MPI_Comm_rank(comm, &rank);
+
+  $vec x[NV], y = $vec_zero(N);
+
+  STYPE x_values[NV][N], y_values[N], alpha[NV];
+
+  // Initialize alpha array
+  for (int v = 0; v < NV; v++)
+    alpha[v] = scalar_make(alpha_Real[v], alpha_Imag[v]);
+
+  if (rank == 0) {
+    for (int i = 0; i < N; i++)
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
+
+    for (int v = 0; v < NV; v++)
+      for (int i = 0; i < N; i++)
+        x_values[v][i] = scalar_make(X_Real[v][i], X_Imag[v][i]);
+
+    y = $vec_make_from_dense(N, y_values);
+
+    for (int v = 0; v < NV; v++)
+      x[v] = $vec_make_from_dense(N, x_values[v]);
+
+    $print("\nVecMAXPY_driver: nprocs = ", size, ", N = ", N, ", NV = ", NV,
+           " ...");
+#ifdef DEBUG
+    $print("\ny: ");
+    $vec_print(y);
+    for (int v = 0; v < NV; v++) {
+      $print("\nVector x[", v, "]:");
+      $vec_print(x[v]);
+    }
+#endif
+  }
+
+  Vec p_x[NV];
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec expectedMAXPY = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+
+  for (int v = 0; v < NV; v++)
+    p_x[v] = CIVL_CivlToPetscVec(x[v], PETSC_DECIDE, comm);
+
+  VecMAXPY_spec(expectedMAXPY, NV, alpha, p_x);
+  PetscErrorCode err_actual = VecMAXPY(p_y, NV, alpha, p_x);
+
+  $assert(err_actual == 0);
+#ifdef DEBUG
+  CIVL_PrintVec("Actual  ", p_y);
+  CIVL_PrintVec("Expected", expectedMAXPY);
+#endif
+  bool flg;
+  VecEqual(p_y, expectedMAXPY, &flg);
+  $assert(flg, "VecMAXPY mismatch between actual and expected results.");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
+  VecDestroy(&p_y);
+  VecDestroy(&expectedMAXPY);
+  for (int v = 0; v < NV; v++)
+    VecDestroy(&p_x[v]);
+  MPI_Finalize();
+}

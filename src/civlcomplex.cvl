@@ -1,0 +1,46 @@
+#include "civlcomplex.cvh"
+#include <math.h>
+#include "scalars.cvh"
+
+$complex $cadd($complex x, $complex y) {
+  return ($complex){x.real + y.real, x.imag + y.imag};
+}
+
+$complex $csub($complex x, $complex y) {
+  return ($complex){x.real - y.real, x.imag - y.imag};
+}
+
+$complex $cmul($complex x, $complex y) {
+  return ($complex){x.real * y.real - x.imag * y.imag,
+      x.real * y.imag + x.imag * y.real};
+}
+
+$complex $cdiv($complex x, $complex y) {
+  CIVL_RTYPE denom = y.real * y.real + y.imag * y.imag;
+  $complex result =
+    $make_complex((x.real * y.real + x.imag * y.imag) / denom,
+		  (x.imag * y.real - x.real * y.imag) / denom);
+  return result;
+}
+
+$complex $cmax($complex x, $complex y) {
+  return ($cabs(x) > $cabs(y)) ? x : y;
+}
+
+$complex $cmin($complex x, $complex y) {
+  return ($cabs(x) < $cabs(y)) ? x : y;
+}
+
+$complex $conj($complex x) {
+  $complex result = {x.real, -x.imag};
+  return result;
+}
+
+CIVL_RTYPE $cabs($complex x) {
+  CIVL_RTYPE sum = x.real * x.real + x.imag * x.imag;
+  return sqrt(sum);
+}
+
+void $cprint($complex x) {
+  $print(x.real, "+(", x.imag, ")i");
+}

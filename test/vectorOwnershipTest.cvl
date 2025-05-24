@@ -1,0 +1,65 @@
+#include <petscvec.h>
+
+$input int N = 10; // Vector length
+
+void test_vector_distribution() {
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank, nprocs;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &nprocs);
+
+  $vec c_v = $vec_zero(0);
+  STYPE values[N];
+
+  if (rank == 0) {
+    // Create vector with values 1, 2, ..., N
+    for (int i = 0; i < N; i++)
+      values[i] = scalar_of(i + 1);
+    c_v = $vec_make_from_dense(N, values);
+    $print("Ownership test: nprocs = ", nprocs, ", N = ", N,", \nvector = ");
+    $vec_print(c_v);
+    $print("\n");
+  }
+
+  Vec v = CIVL_CivlToPetscVec(c_v, PETSC_DECIDE, comm);
+
+  // Ensure v->data is valid
+  if (!v->data) {
+    $print("Process ", rank,
+           " has no local data. Skipping invalid accesses.\n");
+  } else {
+    // Print first global index owned by each process
+    for (int p = 0; p < nprocs; p++)
+      $print("Process ", p, " first global index: ", FIRST(v, p), "\n");
+
+    // Print number of elements owned by each process
+    for (int p = 0; p < nprocs; p++)
+      $print("Process ", p, " owns ", NUM_OWNED(v, p), " elements\n");
+
+    // Print the owner process for each global index and its data
+    for (int i = FIRST(v, rank); i < FIRST(v, rank) + NUM_OWNED(v, rank); i++) {
+      $print("Global index ", i, " (value: ", v->data[i - FIRST(v, rank)],
+             ") is owned by process ", OWNER(v, i), "\n");
+    }
+
+    // Print the local index corresponding to each global index
+    for (int i = FIRST(v, rank); i < FIRST(v, rank) + NUM_OWNED(v, rank); i++) {
+      $print("Global index ", i, " (value: ", v->data[i - FIRST(v, rank)],
+             ") corresponds to local index ", LOCAL_INDEX(v, i), "\n");
+    }
+
+    // Print global index corresponding to each local index for each process
+    // along with data
+    for (int j = 0; j < NUM_OWNED(v, rank); j++) {
+      int global_idx = GLOBAL_INDEX(v, rank, j);
+      $print("Process ", rank, " local index ", j, " (value: ", v->data[j],
+             ") corresponds to global index ", global_idx, "\n");
+    }
+  }
+
+  VecDestroy(&v);
+  MPI_Finalize();
+}
+
+int main(void) { test_vector_distribution(); }

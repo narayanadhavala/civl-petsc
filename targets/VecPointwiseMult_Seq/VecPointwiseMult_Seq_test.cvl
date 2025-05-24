@@ -1,0 +1,48 @@
+#include "petscvec.h"
+#include <mpi.h>
+#include <stdio.h>
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+
+int main(void) {
+  CIVL_RTYPE max;
+  int rank;
+  STYPE x_values[N], y_values[N];
+  $vec x = $vec_zero(N), y = $vec_zero(N), w = $vec_zero(N), expected_w = $vec_zero(N);
+  MPI_Init(NULL, NULL);
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0){
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_of((i + 1));
+      y_values[i] = scalar_of((i + 2));
+    }
+
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+
+    for (int i = 0; i < N; i++) {
+      expected_w.data[i] = scalar_mul(x.data[i], y.data[i]);
+    }
+    
+    $print("\nN = ", N, "\nx: ");
+    $vec_print(x);
+    $print("y: ");
+    $vec_print(y);
+    $print("\nExpected: ");
+    $vec_print(expected_w);
+  }
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, comm);
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, comm);
+  Vec actual_w = CIVL_CivlToPetscVec(w, PETSC_DECIDE, comm);
+  PetscErrorCode err_actual = VecPointwiseMult_Seq(actual_w, p_x, p_y);
+  CIVL_PrintVec("Actual  ", actual_w);
+  $assert(err_actual == 0);
+  $vec actual = CIVL_PetscToCivlVec(actual_w);
+  $assert($vec_eq(actual, expected_w));
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  VecDestroy(&actual_w);
+  MPI_Finalize();
+}
