@@ -2,14 +2,20 @@
 ROOT = ../..
 include $(ROOT)/common.mk
 MODSR =  VecAXPY_Seq_driver.cvl VecAXPY_Seq.c $(SRC)/petscvec.cvl $(SRC)/civlvec.cvl
-MODSC = $(MODSR) $(SRC)/civlcomplex.cvl 
-DEPS = $(MODSC) $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
+MODSC = $(MODSR) $(SRC)/civlcomplex.cvl
+INC_DEPS = $(INC)/petscvec.h $(INC)/scalars.cvh $(INC)/civlcomplex.cvh \
   $(INC)/civlvec.cvh
+DEPS = $(MODSC) $(INC_DEPS)
+FOCUSR = VecAXPY_Seq_driver_focus.cvl VecAXPY_Seq_focus.c $(SRC)/petscvec_focus.cvl $(SRC)/civlvec_focus.cvl
+DEPS_FOCUS = $(FOCUSR) $(INC_DEPS)
 VERIFYR = civl verify -checkTermination -sysIncludePath=$(INC) \
   -DVecAXPY_Seq=VecAXPY_Seq_spec
 VERIFYC = $(VERIFYR) -DCIVL_COMPLEX -DUSE_COMPLEX 
 
 big: ver1r ver1c ver2r ver2c ver3r ver3c ver4r ver4c ver5r ver5c
+
+focus: $(DEPS_FOCUS)
+	$(VERIFYR) -input_mpi_nprocs_lo=1 -input_mpi_nprocs_hi=1 -loop -inputN_MIN=1 $(FOCUSR)
 
 # Note: add -DDEBUG to any command below to see lots of detail
 small: $(DEPS)
