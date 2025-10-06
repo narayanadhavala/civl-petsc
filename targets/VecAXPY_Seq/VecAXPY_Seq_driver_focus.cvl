@@ -1,0 +1,82 @@
+#include "petscvec.h"
+#undef VecAXPY_Seq
+PetscErrorCode VecAXPY_Seq(Vec y, PetscScalar alpha, Vec x);
+
+$input int N_MIN, N_MAX, N;
+$assume(N_MIN <= N && N <= N_MAX);
+$input CIVL_RTYPE X_Real[N], Y_Real[N], alpha_Real;
+#ifdef USE_COMPLEX
+$input CIVL_RTYPE X_Imag[N], Y_Imag[N], alpha_Imag;
+#endif
+
+#pragma CIVL ACSL
+
+void AssertVecEqual(Vec vec1, Vec vec2) {
+  $assert(vec1->map->N == vec2->map->N && vec1->map->n == vec2->map->n);
+  $vec v1 = CIVL_PetscToCivlVec(vec1);
+  $vec v2 = CIVL_PetscToCivlVec(vec2);
+  $assert(v1.len == v2.len);
+  int len = v1.len;
+  //@ focus F;
+  $assert($forall(int i : 0..len - 1) scalar_eq(v1.data[i], v2.data[i]));
+}
+
+int main(void) {
+  MPI_Init(NULL, NULL);
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  $vec x = $vec_zero(0), y = $vec_zero(0);
+  STYPE x_values[N], y_values[N], alpha = scalar_make(alpha_Real, alpha_Imag);
+  if (rank == 0) {
+    $print("driver loop\n");
+    /*@ loop assigns x_values[0..N-1], y_values[0..N-1];
+      @ focus F | x_values[F], y_values[F];
+      @*/
+    for (int i = 0; i < N; i++) {
+      x_values[i] = scalar_make(X_Real[i], X_Imag[i]);
+      y_values[i] = scalar_make(Y_Real[i], Y_Imag[i]);
+    }
+    $print("x_values: ", x_values, "\n");
+    x = $vec_make_from_dense(N, x_values);
+    y = $vec_make_from_dense(N, y_values);
+
+    $print("\nVecAXPY_Seq_driver: nprocs = ", size, ", N = ", N,
+           ", Alpha = ", alpha, " ...");
+#ifdef DEBUG
+    $print("\nx: ");
+    $vec_print(x);
+    $print("y: ");
+    $vec_print(y);
+#endif
+  }
+  $print("P_X CONVERSION\n");
+  Vec p_x = CIVL_CivlToPetscVec(x, PETSC_DECIDE, MPI_COMM_WORLD);
+  $print("P_Y CONVERSION\n");
+  Vec p_y = CIVL_CivlToPetscVec(y, PETSC_DECIDE, MPI_COMM_WORLD);
+  $print("EXPECTED CONVERSION\n");
+  Vec expected = CIVL_CivlToPetscVec(y, PETSC_DECIDE, MPI_COMM_WORLD);
+  $print("SPEC\n");
+  VecAXPY_Seq_spec(expected, alpha, p_x);
+  $print("ACTUAL\n");
+  PetscErrorCode err_actual = VecAXPY_Seq(p_y, alpha, p_x);
+  $assert(err_actual == 0);
+#ifdef DEBUG
+  CIVL_PrintVec("Actual   AXPY", p_y);
+  CIVL_PrintVec("Expected AXPY", expected);
+#endif
+  $print("ASSERT EQUAL\n");
+  AssertVecEqual(p_y, expected);
+  //bool flg;
+  //VecEqual(p_y, expected, &flg);
+  //$assert(flg, "VecAXPY_Seq mismatch between actual and expected results.");
+#ifndef DEBUG
+  if (rank == 0)
+    $print(" ok ");
+#endif
+  VecDestroy(&p_x);
+  VecDestroy(&p_y);
+  VecDestroy(&expected);
+  MPI_Finalize();
+  return 0;
+}
